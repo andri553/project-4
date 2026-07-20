@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  users           User[]
+  rolePermissions RolePermission[]
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model User {
+  id               String           @id @default(uuid())
+  fullName         String
+  email            String           @unique
+  phoneNumber      String           @unique
+  passwordHash     String
+  roleId           String
+  accountStatus    String           @default("ACTIVE") // ACTIVE, LIMITED, LOCKED, SUSPENDED, CLOSED
+  kycStatus        String           @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, PENDING_REVIEW, APPROVED, REJECTED
+  avatarUrl        String?
+  mfaEnabled       Boolean          @default(false)
+  biometricEnabled Boolean          @default(false)
+  lastLoginAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  role             Role             @relation(fields: [roleId], references: [id])
+  sessions         Session[]
+  auditLogs        AuditLog[]
+  securityEvents   SecurityEvent[]
+  loans            Loan[]
+  transactions     Transaction[]
+  insurances       Insurance[]
+  kycVerifications KYCVerification[]
+  devices          Device[]
+  securityIncidents SecurityIncident[]
+  notifications    Notification[]
+
+  riskScore        Int              @default(0)
+  riskLevel        String           @default("LOW") // LOW, MEDIUM, HIGH, CRITICAL
+  isMock           Boolean          @default(false)
+  isArchived       Boolean          @default(false)
+  pinHash          String?
+}
+
+model Session {
+  id                String   @id @default(uuid())
+  userId            String
+  refreshToken      String   @unique
+  deviceId          String?
+  deviceFingerprint String?
+  browser           String?
+  operatingSystem   String?
+  ipAddress         String?
+  lastLogin         DateTime @default(now())
+  lastActivity      DateTime @default(now())
+  isTrustedDevice   Boolean  @default(false)
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock            Boolean  @default(false)
+  isArchived        Boolean  @default(false)
+  status            String   @default("ACTIVE")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  actorId       String?
+  module        String
+  action        String
+  entity        String
+  entityId      String?
+  oldValue      String?
+  newValue      String?
+  result        String
+  requestId     String?
+  correlationId String?
+  httpMethod    String?
+  responseTime  Int?
+  ipAddress     String?
+  browser       String?
+  device        String?
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole     String?
+  isMock        Boolean  @default(false)
+  isArchived    Boolean  @default(false)
+}
+
+model SecurityEvent {
+  id           String   @id @default(uuid())
+  userId       String?
+  category     String
+  sourceModule String
+  severity     String
+  riskScore    Int      @default(0)
+  description  String
+  status       String   @default("OPEN")
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  isMock       Boolean  @default(false)
+  isArchived   Boolean  @default(false)
+}
+
+model Loan {
+  id                 String   @id @default(uuid())
+  userId             String
+  productId          String
+  productName        String
+  amount             Float
+  tenor              Int
+  purpose            String
+  interestRate       Float
+  monthlyInstallment Float
+  totalRepayment     Float
+  status             String   @default("submitted") // submitted, reviewing, active, rejected
+  appliedAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock             Boolean  @default(false)
+  isArchived         Boolean  @default(false)
+}
+
+model Transaction {
+  id               String   @id @default(uuid())
+  accountId        String
+  userId           String
+  type             String   // deposit, withdrawal, transfer_out, transfer_in
+  amount           Float
+  balanceAfter     Float
+  description      String
+  status           String   @default("completed") // completed, pending, failed
+  recipientName    String?
+  recipientAccount String?
+  recipientBank    String?
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock           Boolean  @default(false)
+  isArchived       Boolean  @default(false)
+}
+
+model Insurance {
+  id             String   @id @default(uuid())
+  userId         String
+  productId      String
+  productName    String
+  premium        Float
+  coverageAmount Float
+  status         String   @default("active") // active, expired, cancelled
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock         Boolean  @default(false)
+  isArchived     Boolean  @default(false)
+}
+
+model KYCVerification {
+  id               String   @id @default(uuid())
+  userId           String
+  status           String   @default("pending") // pending, verified, rejected, unverified
+  ocrData          String   // Stringified JSON
+  matchScore       Int?
+  faceMatchPassed  Boolean?
+  submittedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock           Boolean  @default(false)
+  isArchived       Boolean  @default(false)
+  version          Int      @default(1)
+}
+
+model KYCHistory {
+  id          String   @id @default(uuid())
+  kycId       String
+  userId      String
+  event       String
+  details     String
+  officerId   String?
+  officerName String?
+  timestamp   DateTime @default(now())
+  isMock      Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+}
+
+model SecurityIncident {
+  id          String    @id @default(uuid())
+  userId      String?
+  title       String
+  description String
+  severity    String    // LOW, MEDIUM, HIGH, CRITICAL
+  status      String    @default("OPEN") // OPEN, INVESTIGATING, RESOLVED
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  isMock      Boolean   @default(false)
+  isArchived  Boolean   @default(false)
+}
+
+model Device {
+  id          String   @id @default(uuid())
+  userId      String
+  deviceId    String
+  fingerprint String
+  os          String
+  browser     String
+  isTrusted   Boolean  @default(false)
+  location    String?
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock      Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+}
+
+model SystemConfig {
+  key   String @id
+  value String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // transaction, loan, security, kyc
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isMock    Boolean  @default(false)
+  isArchived Boolean  @default(false)
+}
+
