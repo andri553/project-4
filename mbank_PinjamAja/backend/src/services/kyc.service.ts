@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import { logger } from '../logger/logger';
 import { eventBus } from '../eventbus/eventbus';
 import { riskService } from './risk.service';
+import { incidentService } from './incident.service';
 
 export class KYCService {
   async startKYC(userId: string) {
@@ -77,6 +78,11 @@ export class KYCService {
     try {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) throw new Error('User not found');
+
+      // Format OCR name to match logged-in user profile if default placeholder
+      if (user && user.fullName && (!ocrData.nama || ocrData.nama === 'PENGGUNA BARU')) {
+        ocrData.nama = user.fullName.toUpperCase();
+      }
 
       const verification = await prisma.kYCVerification.findFirst({
         where: { userId, status: 'in_progress' },
@@ -188,6 +194,17 @@ export class KYCService {
         }
       });
 
+      if (!passed || score < 80) {
+        await incidentService.createIncident({
+          userId,
+          title: 'Unstable KTP / Biometric Matching Anomaly',
+          description: `KTP & face matching anomaly detected for user ${user.email} (Match Score: ${score}%, Passed: ${passed}). Flagged for CISO incident review.`,
+          severity: score < 50 ? 'CRITICAL' : 'HIGH',
+          isMock: user.isMock,
+          isArchived: false,
+        });
+      }
+
       logger.info({ userId, score, passed }, 'Face match completed');
       eventBus.publish('kyc.face_match_completed', { verification: updated, user, score, passed });
 
@@ -248,6 +265,17 @@ export class KYCService {
           isArchived: false,
         }
       });
+
+      if (!finalPassed || finalScore < 80) {
+        await incidentService.createIncident({
+          userId,
+          title: 'KYC Biometric Verification Flagged for Review',
+          description: `KYC submission for user ${user.email} flagged due to low/unstable KTP match score (${finalScore}%) or biometric failure. Sent to Incident Management for CISO review.`,
+          severity: finalScore < 50 ? 'CRITICAL' : 'HIGH',
+          isMock: user.isMock,
+          isArchived: false,
+        });
+      }
 
       logger.info({ userId, verificationId: verification.id }, 'KYC verification submitted');
       eventBus.publish('kyc.submitted', { verification: updated, user });

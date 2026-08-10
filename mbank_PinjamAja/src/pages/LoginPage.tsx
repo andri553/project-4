@@ -74,9 +74,23 @@ export default function LoginPage() {
     }
 
     if (authMode === 'login') {
-      // Direct login: save phone and go straight to PIN entry
-      authStore.setPhoneNumber(formattedPhone);
-      setStep('pin_entry');
+      const success = await authStore.sendPhoneOTP(formattedPhone);
+      if (success) {
+        const exists = useAuthStore.getState().phoneExists;
+        if (!exists) {
+          useAuthStore.setState({ error: 'Nomor handphone belum terdaftar. Silakan daftar akun baru.' });
+          return;
+        }
+
+        const isMfaActive = useAuthStore.getState().mfaEnabled;
+        if (isMfaActive) {
+          // Mandatory MFA OTP step first, then PIN entry
+          setStep('otp');
+        } else {
+          // MFA not enabled: Direct to PIN entry
+          setStep('pin_entry');
+        }
+      }
     } else {
       // Register mode: send OTP first
       const success = await authStore.sendPhoneOTP(formattedPhone);
@@ -108,10 +122,18 @@ export default function LoginPage() {
     if (fullOtp.length === 6) {
       const success = await authStore.verifyPhoneOTP(fullOtp);
       if (success) {
-        if (useAuthStore.getState().isFirstLogin) {
-          setStep('register_profile');
-        } else {
+        if (authMode === 'login') {
           setStep('pin_entry');
+        } else {
+          // Register mode: need to create profile first before PIN
+          const state = useAuthStore.getState();
+          if (state.tempUserId) {
+            // User already exists in DB (has userId), go straight to PIN
+            setStep('pin_create');
+          } else {
+            // New user: must register profile first
+            setStep('register_profile');
+          }
         }
       } else {
         // Reset OTP input on failure
@@ -171,15 +193,25 @@ export default function LoginPage() {
     }
   };
 
+  const handleRegisterProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim() || !email.trim()) return;
+    const success = await authStore.registerProfile(fullName.trim(), email.trim());
+    if (success) {
+      setStep('pin_create');
+    }
+  };
+
   const handlePinVerification = async (enteredPin: string) => {
     let success = false;
     
-    // If it's a fresh login process (authMode === 'login') with a phone number, use loginWithPhoneAndPin
-    if (authMode === 'login') {
-      success = await authStore.loginWithPhoneAndPin(enteredPin);
-    } else {
-      // Otherwise (returning user from splash, or just finished registration), use verifyPIN which requires userId in localStorage
+    const userId = useAuthStore.getState().tempUserId || localStorage.getItem('auth_user_id');
+    if (userId) {
       success = await authStore.verifyPIN(enteredPin);
+    }
+    
+    if (!success) {
+      success = await authStore.loginWithPhoneAndPin(enteredPin);
     }
     
     if (success) {
@@ -403,6 +435,11 @@ export default function LoginPage() {
       {/* 4. OTP VERIFICATION */}
       {step === 'otp' && (
         <div className="animate-fade-in-up" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '40px 24px' }}>
+          {authMode === 'login' && authStore.mfaEnabled && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--color-primary-50)', color: 'var(--color-primary)', borderRadius: 20, fontSize: 12, fontWeight: 700, marginBottom: 12, width: 'fit-content' }}>
+              <ShieldCheck size={16} /> Verifikasi MFA Aktif — Tahap 1 dari 2
+            </div>
+          )}
           <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 8 }}>
             Verifikasi OTP
           </h2>
@@ -454,23 +491,17 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* 4.5 REGISTER PROFILE */}
+      {/* 5A. REGISTER PROFILE (New User) */}
       {step === 'register_profile' && (
         <div className="animate-fade-in-up" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '40px 24px' }}>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 8 }}>
-            Lengkapi Profil Anda
+            Lengkapi Data Profil
           </h2>
           <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 32 }}>
-            Buat akun baru PinjamAJA untuk memulai pendanaan
+            Isi data diri Anda untuk melanjutkan pendaftaran akun
           </p>
 
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const success = await authStore.registerProfile(fullName, email);
-            if (success) {
-              setStep('pin_create');
-            }
-          }} style={{ flex: 1 }}>
+          <form onSubmit={handleRegisterProfileSubmit} style={{ flex: 1 }}>
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
                 Nama Lengkap
@@ -478,25 +509,26 @@ export default function LoginPage() {
               <input
                 type="text"
                 className="input-field"
-                placeholder="Masukkan nama lengkap"
+                placeholder="Contoh: Budi Santoso"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                style={{ fontSize: 15, fontWeight: 600, width: '100%', padding: '12px' }}
+                onChange={(e) => { authStore.clearError(); setFullName(e.target.value); }}
+                style={{ fontSize: 15, fontWeight: 600, width: '100%' }}
                 required
+                autoFocus
               />
             </div>
 
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                Email
+                Alamat Email
               </label>
               <input
                 type="email"
                 className="input-field"
-                placeholder="nama@email.com"
+                placeholder="Contoh: budi@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ fontSize: 15, fontWeight: 600, width: '100%', padding: '12px' }}
+                onChange={(e) => { authStore.clearError(); setEmail(e.target.value); }}
+                style={{ fontSize: 15, fontWeight: 600, width: '100%' }}
                 required
               />
             </div>
@@ -511,20 +543,37 @@ export default function LoginPage() {
             <button
               type="submit"
               className="btn-primary"
-              disabled={authStore.isLoading || !fullName || !email}
+              disabled={authStore.isLoading || !fullName.trim() || !email.trim()}
               style={{ width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
-              {authStore.isLoading ? <Loader2 className="animate-spin" size={18} /> : null}
-              Lanjutkan Ke PIN
+              {authStore.isLoading ? <Loader2 className="animate-spin-slow" size={18} /> : null}
+              {authStore.isLoading ? 'Menyimpan...' : 'Lanjutkan Buat PIN'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { authStore.clearError(); setStep('phone'); }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--color-text-secondary)',
+                fontSize: 13, fontWeight: 600, marginTop: 16, width: '100%',
+                cursor: 'pointer', textAlign: 'center'
+              }}
+            >
+              Kembali
             </button>
           </form>
         </div>
       )}
 
-      {/* 5. CREATE PIN SCREEN */}
+      {/* 5B. CREATE PIN SCREEN */}
       {(step === 'pin_create' || step === 'pin_confirm' || step === 'pin_entry') && (
         <div className="animate-fade-in" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '40px 24px' }}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            {step === 'pin_entry' && authMode === 'login' && authStore.mfaEnabled && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'var(--color-success-light)', color: '#006B4F', borderRadius: 20, fontSize: 12, fontWeight: 700, marginBottom: 12 }}>
+                <ShieldCheck size={16} color="var(--color-success)" /> Verifikasi MFA — Tahap 2 dari 2 (PIN)
+              </div>
+            )}
             <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 8 }}>
               {step === 'pin_create' ? 'Buat PIN Transaksi' : step === 'pin_confirm' ? 'Konfirmasi PIN Anda' : 'Masukkan PIN Anda'}
             </h2>

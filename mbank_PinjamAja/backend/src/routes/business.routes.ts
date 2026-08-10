@@ -9,6 +9,7 @@ const router = Router();
 router.post('/auth/login', authLimiter, businessController.login);
 router.post('/auth/logout', businessController.logout);
 router.get('/auth/me', authMiddleware, businessController.me);
+router.post('/auth/security-settings', authMiddleware, businessController.updateSecuritySettings);
 
 // Loans routes
 router.post('/loans/apply', authMiddleware, businessController.applyLoan);

@@ -6,7 +6,7 @@
 
 export type UserRole = 'customer' | 'customer_support' | 'verification_officer' | 'finance_officer';
 
-export type KYCStatus = 'unverified' | 'pending' | 'verified' | 'rejected' | 'expired';
+export type KYCStatus = 'unverified' | 'pending' | 'in_progress' | 'pending_review' | 'verified' | 'rejected' | 'expired' | 'reupload_required' | 'suspended';
 
 export type LoanStatus = 'draft' | 'submitted' | 'reviewing' | 'approved' | 'disbursed' | 'active' | 'completed' | 'rejected' | 'defaulted';
 
@@ -142,6 +142,7 @@ export interface KTPOCRData {
   pekerjaan: string;
   kewarganegaraan: string;
   berlakuHingga: string;
+  ocrConfidence?: string;
 }
 
 export type KYCWorkflowStep = 'idle' | 'ktp_upload' | 'ocr_review' | 'selfie_capture' | 'face_matching' | 'result';

@@ -20,6 +20,7 @@ interface AuthStore {
   trustedDevice: boolean;
   biometricEnabled: boolean;
   phoneExists: boolean | null;
+  mfaEnabled: boolean | null;
 
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -34,6 +35,7 @@ interface AuthStore {
   verifyPIN: (pin: string) => Promise<boolean>;
   biometricUnlock: () => Promise<boolean>;
   enableBiometricDirectly: (enabled: boolean) => Promise<void>;
+  updateSecuritySettings: (settings: { mfaEnabled?: boolean; biometricEnabled?: boolean }) => Promise<boolean>;
   loginWithPhoneAndPin: (pin: string) => Promise<boolean>;
   
   // Session Restoration & Refresh Token Rotation
@@ -68,6 +70,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   trustedDevice: localStorage.getItem('auth_device_trusted') === 'true',
   biometricEnabled: localStorage.getItem('auth_biometric_enabled') === 'true',
   phoneExists: null,
+  mfaEnabled: null,
 
   setPhoneNumber: (phone: string) => set({ phoneNumber: phone }),
   clearError: () => set({ error: null }),
@@ -175,8 +178,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return false;
       }
 
-      const { exists } = json.data;
-      set({ phoneExists: exists });
+      const { exists, mfaEnabled } = json.data;
+      set({ phoneExists: exists, mfaEnabled: !!mfaEnabled });
       localStorage.setItem('auth_phone_number', phone);
       return true;
     } catch (e) {
@@ -291,91 +294,102 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  verifyPIN: async (pin) => {
-  set({ isLoading: true, error: null });
+  verifyPIN: async (pin: string) => {
+    set({ isLoading: true, error: null });
 
-  const userId = get().tempUserId || localStorage.getItem('auth_user_id');
+    const userId = get().tempUserId || localStorage.getItem('auth_user_id');
 
-  if (!userId) {
-    set({
-      isLoading: false,
-      error: 'Sesi habis. Silakan login kembali.'
-    });
-    return false;
-  }
-
-  try {
-    const res = await fetch('/api/v1/auth/phone/verify-pin', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        userId,
-        pin,
-        deviceId: get().deviceId,
-        deviceFingerprint: 'FINGERPRINT-' + get().deviceId,
-        rememberDevice: true
-      })
-    });
-
-    const json = await res.json();
-
-    set({ isLoading: false });
-
-    if (!json.success) {
-      set({ error: json.message });
+    if (!userId) {
+      const phone = get().phoneNumber || localStorage.getItem('auth_phone_number');
+      if (phone) {
+        return get().loginWithPhoneAndPin(pin);
+      }
+      set({
+        isLoading: false,
+        error: 'Sesi habis. Silakan login kembali.'
+      });
       return false;
     }
 
-    const {
-      accessToken,
-      refreshToken,
-      user,
-      sessionId,
-      trustedDevice
-    } = json.data;
+    try {
+      const res = await fetch('/api/v1/auth/phone/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          pin,
+          deviceId: get().deviceId,
+          deviceFingerprint: 'FINGERPRINT-' + get().deviceId,
+          rememberDevice: true
+        })
+      });
 
-    localStorage.setItem('auth_token', accessToken);
-    localStorage.setItem('auth_refresh_token', refreshToken);
-    localStorage.setItem('auth_session_id', sessionId);
-    localStorage.setItem('auth_device_trusted', String(trustedDevice));
-    localStorage.setItem('auth_user_id', user.id);
-    localStorage.setItem(
-      'auth_biometric_enabled',
-      String(user.biometricEnabled)
-    );
+      const json = await res.json();
 
-    set({
-      user,
-      isAuthenticated: true,
-      sessionId,
-      trustedDevice,
-      biometricEnabled: user.biometricEnabled,
-      error: null
-    });
+      set({ isLoading: false });
 
-    return true;
-  } catch (e) {
-    set({
-      isLoading: false,
-      error: 'Verifikasi PIN gagal.'
-    });
-    return false;
-  }
-},
+      if (!json.success) {
+        set({ error: json.message });
+        return false;
+      }
 
-  loginWithPhoneAndPin: async (pin) => {
+      const {
+        accessToken,
+        refreshToken,
+        user,
+        sessionId,
+        trustedDevice
+      } = json.data;
+
+      localStorage.setItem('auth_token', accessToken);
+      localStorage.setItem('auth_refresh_token', refreshToken);
+      localStorage.setItem('auth_session_id', sessionId);
+      localStorage.setItem('auth_device_trusted', String(trustedDevice));
+      localStorage.setItem('auth_user_id', user.id);
+      localStorage.setItem('auth_biometric_enabled', String(user.biometricEnabled));
+
+      set({
+        user,
+        isAuthenticated: true,
+        sessionId,
+        trustedDevice,
+        biometricEnabled: user.biometricEnabled,
+        error: null
+      });
+
+      return true;
+    } catch (e) {
+      set({
+        isLoading: false,
+        error: 'Verifikasi PIN gagal.'
+      });
+      return false;
+    }
+  },
+
+  loginWithPhoneAndPin: async (pin: string) => {
     set({ isLoading: true, error: null });
+
+    const phone = get().phoneNumber || localStorage.getItem('auth_phone_number');
+
+    if (!phone) {
+      const userId = get().tempUserId || localStorage.getItem('auth_user_id');
+      if (userId) {
+        return get().verifyPIN(pin);
+      }
+      set({
+        isLoading: false,
+        error: 'Sesi habis. Silakan login kembali.'
+      });
+      return false;
+    }
 
     try {
       const res = await fetch('/api/v1/auth/phone/login-pin', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phoneNumber: get().phoneNumber,
+          phoneNumber: phone,
           pin,
           deviceId: get().deviceId,
           deviceFingerprint: 'FINGERPRINT-' + get().deviceId,
@@ -492,6 +506,48 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } catch (e) {
       console.error('Failed to update biometrics preference on server');
     }
+  },
+
+  updateSecuritySettings: async (settings) => {
+    const token = localStorage.getItem('auth_token');
+    const user = get().user;
+    if (!token && !user) return false;
+
+    // Optimistic UI update
+    set(state => {
+      if (state.user) {
+        return {
+          user: {
+            ...state.user,
+            ...(typeof settings.mfaEnabled === 'boolean' ? { mfaEnabled: settings.mfaEnabled } : {}),
+            ...(typeof settings.biometricEnabled === 'boolean' ? { biometricEnabled: settings.biometricEnabled } : {})
+          },
+          ...(typeof settings.biometricEnabled === 'boolean' ? { biometricEnabled: settings.biometricEnabled } : {})
+        };
+      }
+      return {};
+    });
+
+    try {
+      const res = await fetch('/api/v1/business/auth/security-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(settings)
+      });
+      const json = await res.json();
+      if (json.success) {
+        if (typeof settings.biometricEnabled === 'boolean') {
+          localStorage.setItem('auth_biometric_enabled', String(settings.biometricEnabled));
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to update security settings on server', err);
+    }
+    return false;
   },
 
   // --- Session Restoration & Rotation ---

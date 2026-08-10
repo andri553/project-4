@@ -27,7 +27,8 @@ const PORT = process.env.PORT || 4000;
 // Apply Security Middlewares
 app.use(securityHeaders);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Correlation ID context middleware
 app.use((req: any, res: any, next: any) => {
@@ -38,6 +39,9 @@ app.use((req: any, res: any, next: any) => {
 });
 
 // Register Health Routes (Bypass Rate Limiter)
+app.get('/', (req, res) => {
+  res.json({ status: 'online', message: 'Enterprise Banking Platform Backend API', health: '/health' });
+});
 app.use('/health', healthRoutes);
 app.use('/api/v1/health', healthRoutes);
 

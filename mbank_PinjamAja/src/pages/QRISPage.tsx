@@ -189,6 +189,11 @@ export default function QRISPage() {
   // Local list of QRIS transactions
   const [localQrisTxs, setLocalQrisTxs] = useState(initialQrisTxs);
 
+  // Filter transactions by current logged-in user ID
+  const userQrisTxs = useMemo(() => {
+    return localQrisTxs.filter(tx => tx.userId === user?.id);
+  }, [localQrisTxs, user?.id]);
+
   const [showKycModal, setShowKycModal] = useState(false);
 
   const startSimulation = (countryCode: 'ID' | 'SG' | 'MY' | 'TH') => {
@@ -760,84 +765,110 @@ export default function QRISPage() {
         {/* ==================================== */}
         {activeTab === 'history' && (
           <div className="animate-fade-in">
-            <div className="stagger-children">
-              {localQrisTxs.map((tx) => (
-                <div key={tx.id}>
-                  <button
-                    className="card card-hover"
-                    onClick={() => setSelectedTx(selectedTx === tx.id ? null : tx.id)}
-                    style={{
-                      width: '100%',
-                      padding: '14px 16px',
-                      marginBottom: 8,
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      border: '1px solid var(--color-border-light)',
-                      background: 'var(--color-surface)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 'var(--radius-md)',
-                        background: 'var(--color-surface-secondary)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0
-                      }}>
-                        {getCountryFlag(tx.country)}
-                      </div>
-                      
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {tx.merchantName}
-                        </p>
-                        <p style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                          {tx.countryName} · {formatDate(tx.createdAt, 'relative')}
-                        </p>
-                      </div>
-                      
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: 13, fontWeight: 800 }}>-{formatRupiah(tx.totalAmount)}</p>
-                        <p style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
-                          {tx.originalCurrency} {tx.originalAmount.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-
-                  {selectedTx === tx.id && (
-                    <div className="card animate-scale-in" style={{ padding: '14px 16px', marginBottom: 8, marginTop: -4, background: 'var(--color-surface-secondary)', fontSize: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Merchant ID</span>
-                        <span style={{ fontWeight: 600 }}>{tx.merchantId}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Jumlah Asli</span>
-                        <span style={{ fontWeight: 600 }}>{tx.originalCurrency} {tx.originalAmount.toLocaleString()}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Kurs</span>
-                        <span style={{ fontWeight: 600 }}>1 {tx.originalCurrency} = {formatRupiah(tx.exchangeRate)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Konversi</span>
-                        <span style={{ fontWeight: 600 }}>{formatRupiah(tx.convertedAmount)}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Biaya Admin</span>
-                        <span style={{ fontWeight: 600 }}>{formatRupiah(tx.fee)}</span>
-                      </div>
-                      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600 }}>Total</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontWeight: 800, fontSize: 14 }}>{formatRupiah(tx.totalAmount)}</span>
-                          <StatusBadge status={tx.status} />
+            {userQrisTxs.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '48px 16px',
+                color: 'var(--color-text-muted)',
+                background: 'var(--color-surface)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--color-border-light)'
+              }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%',
+                  background: 'var(--color-surface-secondary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px'
+                }}>
+                  <QrCode size={28} color="var(--color-text-muted)" />
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: 'var(--color-text-secondary)' }}>
+                  Belum Ada Transaksi QRIS
+                </p>
+                <p style={{ fontSize: 12 }}>
+                  Riwayat transaksi QRIS Anda akan muncul di sini setelah Anda melakukan transaksi.
+                </p>
+              </div>
+            ) : (
+              <div className="stagger-children">
+                {userQrisTxs.map((tx) => (
+                  <div key={tx.id}>
+                    <button
+                      className="card card-hover"
+                      onClick={() => setSelectedTx(selectedTx === tx.id ? null : tx.id)}
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        marginBottom: 8,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        border: '1px solid var(--color-border-light)',
+                        background: 'var(--color-surface)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                          width: 40, height: 40, borderRadius: 'var(--radius-md)',
+                          background: 'var(--color-surface-secondary)', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0
+                        }}>
+                          {getCountryFlag(tx.country)}
+                        </div>
+                        
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {tx.merchantName}
+                          </p>
+                          <p style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                            {tx.countryName} · {formatDate(tx.createdAt, 'relative')}
+                          </p>
+                        </div>
+                        
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: 13, fontWeight: 800 }}>-{formatRupiah(tx.totalAmount)}</p>
+                          <p style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                            {tx.originalCurrency} {tx.originalAmount.toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    </button>
+
+                    {selectedTx === tx.id && (
+                      <div className="card animate-scale-in" style={{ padding: '14px 16px', marginBottom: 8, marginTop: -4, background: 'var(--color-surface-secondary)', fontSize: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Merchant ID</span>
+                          <span style={{ fontWeight: 600 }}>{tx.merchantId}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Jumlah Asli</span>
+                          <span style={{ fontWeight: 600 }}>{tx.originalCurrency} {tx.originalAmount.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Kurs</span>
+                          <span style={{ fontWeight: 600 }}>1 {tx.originalCurrency} = {formatRupiah(tx.exchangeRate)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Konversi</span>
+                          <span style={{ fontWeight: 600 }}>{formatRupiah(tx.convertedAmount)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Biaya Admin</span>
+                          <span style={{ fontWeight: 600 }}>{formatRupiah(tx.fee)}</span>
+                        </div>
+                        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 600 }}>Total</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 800, fontSize: 14 }}>{formatRupiah(tx.totalAmount)}</span>
+                            <StatusBadge status={tx.status} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

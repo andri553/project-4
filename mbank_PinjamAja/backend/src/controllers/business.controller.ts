@@ -6,6 +6,8 @@ import { loanService } from '../services/loan.service';
 import { savingsService } from '../services/savings.service';
 import { kycService } from '../services/kyc.service';
 import { notificationService } from '../services/notification.service';
+import { prisma } from '../config/prisma';
+import { securityService } from '../security/security.service';
 import { sendSuccess, sendError } from '../utils/response';
 import { logger } from '../logger/logger';
 import { eventBus } from '../eventbus/eventbus';
@@ -297,6 +299,57 @@ export class BusinessController {
       const { id } = req.params;
       await notificationService.markAsRead(id as string);
       return sendSuccess(res, 'Notification marked read');
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  // Update Security Settings (MFA & Biometric)
+  async updateSecuritySettings(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return sendError(res, 'Unauthorized', 401);
+
+      const { mfaEnabled, biometricEnabled } = req.body;
+
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(typeof mfaEnabled === 'boolean' ? { mfaEnabled } : {}),
+          ...(typeof biometricEnabled === 'boolean' ? { biometricEnabled } : {})
+        }
+      });
+
+      if (typeof mfaEnabled === 'boolean') {
+        await securityService.log({
+          userId,
+          category: 'Security Settings',
+          sourceModule: 'auth_service',
+          severity: 'Medium',
+          riskScore: mfaEnabled ? 0 : 15,
+          description: `User ${user.email} ${mfaEnabled ? 'ENABLED' : 'DISABLED'} Multi-Factor Authentication (MFA)`,
+          status: 'RESOLVED'
+        });
+        eventBus.publish('security.mfa_toggled', { userId, mfaEnabled });
+      }
+
+      if (typeof biometricEnabled === 'boolean') {
+        await securityService.log({
+          userId,
+          category: 'Security Settings',
+          sourceModule: 'auth_service',
+          severity: 'Low',
+          riskScore: 0,
+          description: `User ${user.email} ${biometricEnabled ? 'ENABLED' : 'DISABLED'} Biometric Authentication`,
+          status: 'RESOLVED'
+        });
+        eventBus.publish('security.biometric_toggled', { userId, biometricEnabled });
+      }
+
+      return sendSuccess(res, 'Security settings updated successfully', {
+        mfaEnabled: user.mfaEnabled,
+        biometricEnabled: user.biometricEnabled
+      });
     } catch (error: any) {
       next(error);
     }

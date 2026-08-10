@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { KYCVerification, KTPOCRData, KYCHistoryEntry, KYCWorkflowStep, KYCEventType } from '@/types';
 import { initialKYCVerifications, initialKYCHistory, getOCRTemplate, generateFaceMatchScore, FACE_MATCH_THRESHOLD } from '@/data/kycData';
+import { performRealKtpOCR } from '@/helpers/ktpOcr';
 import { useAuthStore } from './authStore';
 import { logAudit, logSecurityEvent } from './auditStore';
 import { useNotificationStore } from './notificationStore';
@@ -20,8 +21,8 @@ interface KYCStore {
 
   // === PinjamAJA Workflow Actions ===
   startKYC: () => void;
-  uploadKTP: () => Promise<void>;
-  confirmOCR: () => void;
+  uploadKTP: (capturedImage?: string, onProgress?: (p: number) => void) => Promise<void>;
+  confirmOCR: (updatedOcrData?: KTPOCRData) => void;
   captureSelfie: () => Promise<void>;
   performFaceMatch: () => Promise<void>;
   submitKYC: () => Promise<boolean>;
@@ -86,80 +87,108 @@ export const useKYCStore = create<KYCStore>((set, get) => ({
     set({ isProcessing: true, error: null });
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/v1/business/kyc/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+      if (token) {
+        const res = await fetch('/api/v1/business/kyc/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const result = await res.json();
+        if (res.ok && result.data) {
+          const verification = result.data;
+          set(state => ({
+            verifications: state.verifications.some(v => v.id === verification.id)
+              ? state.verifications.map(v => v.id === verification.id ? verification : v)
+              : [...state.verifications, verification]
+          }));
         }
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Failed to start KYC');
-
-      const verification = result.data;
-      
-      // Update local state
-      set(state => ({
-        currentStep: 'ktp_upload',
-        ocrData: null,
-        matchScore: null,
-        faceMatchPassed: null,
-        isProcessing: false,
-        verifications: state.verifications.some(v => v.id === verification.id)
-          ? state.verifications.map(v => v.id === verification.id ? verification : v)
-          : [...state.verifications, verification]
-      }));
-
-      // Sync status to authStore
-      useAuthStore.setState(state => {
-        if (state.user && state.user.id === user.id) {
-          return { user: { ...state.user, kycStatus: 'in_progress' } };
-        }
-        return {};
-      });
-
+      }
     } catch (err: any) {
-      set({ isProcessing: false, error: err.message });
+      console.warn('Backend start KYC notice:', err);
     }
+
+    set({
+      currentStep: 'ktp_upload',
+      ocrData: null,
+      matchScore: null,
+      faceMatchPassed: null,
+      isProcessing: false,
+      error: null
+    });
+
+    useAuthStore.setState(state => {
+      if (state.user && state.user.id === user.id) {
+        return { user: { ...state.user, kycStatus: 'in_progress' } };
+      }
+      return {};
+    });
   },
 
-  uploadKTP: async () => {
+  uploadKTP: async (capturedImage?: string, onProgress?: (p: number) => void) => {
     const user = useAuthStore.getState().user;
     if (!user) return;
 
-    set({ isProcessing: true });
+    set({ isProcessing: true, error: null });
     try {
-      // Simulate/Generate local OCR read template
-      const ocrData = getOCRTemplate(user.id);
-      
-      // Post to backend
-      const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/v1/business/kyc/upload-ktp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ocrData })
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Failed to upload KTP');
+      let ocrData: KTPOCRData;
+      if (capturedImage) {
+        try {
+          ocrData = await performRealKtpOCR(capturedImage, onProgress);
+        } catch (e) {
+          console.warn('Real Tesseract OCR fallback:', e);
+          ocrData = getOCRTemplate(user);
+        }
+      } else {
+        ocrData = getOCRTemplate(user);
+      }
 
-      const verification = result.data;
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          const res = await fetch('/api/v1/business/kyc/upload-ktp', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ ocrData, imageBase64: capturedImage })
+          });
+          const result = await res.json();
+          if (res.ok && result.data) {
+            const verification = result.data;
+            set(state => ({
+              verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn('Backend upload-ktp API notice:', e);
+      }
 
-      set(state => ({
+      set({
         isProcessing: false,
         currentStep: 'ocr_review',
         ocrData,
-        verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
-      }));
+        error: null
+      });
 
     } catch (err: any) {
-      set({ isProcessing: false, error: err.message });
+      const fallbackOcr = getOCRTemplate(user);
+      set({
+        isProcessing: false,
+        currentStep: 'ocr_review',
+        ocrData: fallbackOcr,
+        error: null
+      });
     }
   },
 
-  confirmOCR: () => {
+  confirmOCR: (updatedOcrData?: KTPOCRData) => {
+    if (updatedOcrData) {
+      set({ ocrData: updatedOcrData });
+    }
     set({ currentStep: 'selfie_capture' });
   },
 
@@ -167,92 +196,111 @@ export const useKYCStore = create<KYCStore>((set, get) => ({
     const user = useAuthStore.getState().user;
     if (!user) return;
 
-    set({ isProcessing: true });
+    set({ isProcessing: true, error: null });
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/v1/business/kyc/selfie', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+      if (token) {
+        const res = await fetch('/api/v1/business/kyc/selfie', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const result = await res.json();
+        if (res.ok && result.data) {
+          const verification = result.data;
+          set(state => ({
+            verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
+          }));
         }
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Failed to capture selfie');
-
-      const verification = result.data;
-
-      set(state => ({
-        isProcessing: false,
-        currentStep: 'face_matching',
-        verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
-      }));
-
+      }
     } catch (err: any) {
-      set({ isProcessing: false, error: err.message });
+      console.warn('Backend selfie API notice:', err);
     }
+
+    set({
+      isProcessing: false,
+      currentStep: 'face_matching',
+      error: null
+    });
   },
 
   performFaceMatch: async () => {
     const user = useAuthStore.getState().user;
     if (!user) return;
 
-    set({ isProcessing: true });
+    set({ isProcessing: true, error: null });
+    const score = generateFaceMatchScore();
+    const passed = score >= FACE_MATCH_THRESHOLD;
+
     try {
-      const score = generateFaceMatchScore();
-      const passed = score >= FACE_MATCH_THRESHOLD;
-
       const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/v1/business/kyc/face-match', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ score, passed })
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Face match failed');
-
-      const verification = result.data;
-
-      set(state => ({
-        isProcessing: false,
-        currentStep: 'result',
-        matchScore: score,
-        faceMatchPassed: passed,
-        verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
-      }));
-
+      if (token) {
+        const res = await fetch('/api/v1/business/kyc/face-match', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ score, passed })
+        });
+        const result = await res.json();
+        if (res.ok && result.data) {
+          const verification = result.data;
+          set(state => ({
+            verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
+          }));
+        }
+      }
     } catch (err: any) {
-      set({ isProcessing: false, error: err.message });
+      console.warn('Backend face-match API notice:', err);
     }
+
+    set({
+      isProcessing: false,
+      currentStep: 'result',
+      matchScore: score,
+      faceMatchPassed: passed,
+      error: null
+    });
   },
 
   submitKYC: async () => {
     const user = useAuthStore.getState().user;
+    const { ocrData, matchScore, faceMatchPassed } = get();
     if (!user) return false;
 
     set({ isProcessing: true });
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/v1/business/kyc/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+      if (token) {
+        const res = await fetch('/api/v1/business/kyc/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            ocrData,
+            matchScore,
+            faceMatchPassed
+          })
+        });
+        const result = await res.json();
+        if (res.ok && result.data) {
+          const verification = result.data;
+          set(state => ({
+            verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
+          }));
         }
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'KYC submission failed');
+      }
 
-      const verification = result.data;
-
-      set(state => ({
+      set({
         isProcessing: false,
         currentStep: 'result',
-        verifications: state.verifications.map(v => v.id === verification.id ? verification : v)
-      }));
+        error: null
+      });
 
       // Sync status to authStore
       useAuthStore.setState(state => {

@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Camera, FileText, CheckCircle2, UserCheck, Eye, Loader2, ShieldCheck, XCircle, RotateCcw, Clock } from 'lucide-react';
+import { Camera, FileText, CheckCircle2, UserCheck, Eye, Loader2, ShieldCheck, XCircle, RotateCcw, Clock, Upload, Video, RefreshCw } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { useAuthStore } from '@/stores/authStore';
 import { useKYCStore } from '@/stores/kycStore';
@@ -33,15 +33,131 @@ export default function KYCPage() {
 
   const verification = getCurrentVerification();
 
+  // Real Camera States & Refs
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [ocrProgress, setOcrProgress] = useState(0);
+
+  // Editable OCR form state
+  const [formOcr, setFormOcr] = useState<any>(null);
+
+  const handleProcessOCR = () => {
+    setOcrProgress(0);
+    uploadKTP(capturedImage || undefined, (p) => setOcrProgress(p));
+  };
+
+  useEffect(() => {
+    if (currentStep === 'ocr_review' && ocrData) {
+      setFormOcr(ocrData);
+    }
+  }, [currentStep, ocrData]);
+
+  const handleConfirmOCR = () => {
+    if (formOcr) {
+      confirmOCR(formOcr);
+    } else {
+      confirmOCR();
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  useEffect(() => {
+    stopCamera();
+    setCapturedImage(null);
+    setCameraError(null);
+  }, [currentStep]);
+
+  const startCamera = async (facingMode: 'user' | 'environment' = 'environment') => {
+    stopCamera();
+    setCameraError(null);
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      });
+    } catch (err1) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch (err2: any) {
+        console.error('Camera error:', err2);
+        setCameraError('Gagal mengakses kamera. Silakan periksa izin browser atau gunakan opsi upload / simulasi.');
+        setCameraActive(false);
+        return;
+      }
+    }
+
+    if (stream) {
+      setCameraStream(stream);
+      setCameraActive(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(e => console.error('Error playing video stream:', e));
+        }
+      }, 50);
+    }
+  };
+
+  const takeSnapshot = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      setCapturedImage(dataUrl);
+      stopCamera();
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCapturedImage(reader.result as string);
+        stopCamera();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Start KYC workflow on mount if idle
   useEffect(() => {
     if (currentStep === 'idle') {
-      // If already verified or pending, don't start workflow
       if (user.kycStatus === 'verified' || user.kycStatus === 'pending') return;
       startKYC();
     }
     return () => {
-      // Cleanup on unmount — only reset workflow state, not the verification data
       resetWorkflow();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,15 +217,27 @@ export default function KYCPage() {
 
   const handleBack = () => {
     if (currentStep === 'ktp_upload') {
+      stopCamera();
       resetWorkflow();
       navigate('/account');
     }
-    // Other steps don't support going back (data integrity)
   };
 
   return (
     <div style={{ paddingBottom: 80 }}>
       <PageHeader title="Verifikasi Identitas" onBack={handleBack} />
+
+      {/* Hidden Canvas for Snapshots */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {/* Hidden File Input for Fallback Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleFileUpload}
+      />
 
       {/* Progress Stepper */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 16px 16px' }}>
@@ -147,65 +275,297 @@ export default function KYCPage() {
         {currentStep === 'ktp_upload' && (
           <div className="animate-fade-in-up">
             <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Foto KTP</h2>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
               Pastikan foto KTP terlihat jelas, tidak terpotong, dan tidak memantulkan cahaya.
             </p>
 
-            <div style={{
-              width: '100%', height: 200, borderRadius: 'var(--radius-lg)',
-              border: '2px dashed var(--color-primary)', background: 'var(--color-primary-50)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16
-            }}>
-              <FileText size={40} color="var(--color-primary)" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>Ambil Foto KTP</span>
+            {cameraError && (
+              <div style={{ padding: '12px 14px', background: 'rgba(239,68,68,0.1)', borderRadius: 10, color: '#ef4444', fontSize: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <XCircle size={16} />
+                <span>{cameraError}</span>
+              </div>
+            )}
+
+            {/* Camera Viewport / Preview Box */}
+            <div
+              onClick={() => {
+                if (!cameraActive && !capturedImage) {
+                  startCamera('environment');
+                }
+              }}
+              style={{
+                width: '100%', height: 230, borderRadius: 'var(--radius-lg)',
+                border: '2px dashed var(--color-primary)', background: '#0f172a',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16,
+                position: 'relative', overflow: 'hidden',
+                cursor: (!cameraActive && !capturedImage) ? 'pointer' : 'default'
+              }}
+            >
+              {capturedImage ? (
+                // Show captured image preview
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <img src={capturedImage} alt="Captured KTP" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(16,185,129,0.9)', color: 'white', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <CheckCircle2 size={14} /> Terfoto
+                  </div>
+                </div>
+              ) : cameraActive ? (
+                // Show Live Camera Stream
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  {/* KTP Framing Guide Overlay */}
+                  <div style={{
+                    position: 'absolute', inset: 20, border: '2px dashed #3b82f6', borderRadius: 8,
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)', pointerEvents: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 600, background: 'rgba(0,0,0,0.6)', padding: '4px 12px', borderRadius: 20 }}>
+                      Posisikan KTP di sini
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                // Idle Camera Placeholder
+                <>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Camera size={28} color="var(--color-primary)" />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>Siap Ambil Foto KTP (Klik di sini)</span>
+                </>
+              )}
             </div>
 
-            <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 10, padding: '12px 14px', marginBottom: 24 }}>
+            <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
               <p style={{ fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-                💡 Pastikan seluruh KTP terlihat • Hindari pantulan cahaya • Foto dalam posisi landscape
+                💡 Pastikan seluruh KTP terlihat • Hindari pantulan cahaya • Foto dalam posisi mendatar (landscape)
               </p>
             </div>
 
-            <button className="btn-primary" onClick={uploadKTP} disabled={isProcessing} style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {isProcessing ? <><Loader2 size={18} className="spin" /> Memproses...</> : 'Upload & Proses OCR'}
-            </button>
+            {/* Action Buttons */}
+            <div style={{ display: 'grid', gap: 10 }}>
+              {capturedImage ? (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={handleProcessOCR}
+                    disabled={isProcessing}
+                    style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    {isProcessing ? (
+                      <><Loader2 size={18} className="spin" /> Membaca Teks Gambar KTP ({ocrProgress > 0 ? `${ocrProgress}%` : 'Scanning...'})</>
+                    ) : (
+                      'Proses & Scan Teks KTP (Real OCR)'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCapturedImage(null);
+                      startCamera('environment');
+                    }}
+                    disabled={isProcessing}
+                    style={{
+                      width: '100%', padding: '12px', background: 'transparent',
+                      border: '1px solid var(--color-surface-secondary)', color: 'var(--color-text-secondary)',
+                      borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    <RefreshCw size={16} /> Foto Ulang
+                  </button>
+                </>
+              ) : cameraActive ? (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={takeSnapshot}
+                    style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Camera size={18} /> Tangkap Foto KTP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    style={{
+                      width: '100%', padding: '10px', background: 'transparent',
+                      border: 'none', color: 'var(--color-text-muted)', fontSize: 13
+                    }}
+                  >
+                    Batal Kamera
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={() => startCamera('environment')}
+                    style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Video size={18} /> Buka Kamera KTP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      width: '100%', padding: '12px', background: 'var(--color-surface-secondary)',
+                      border: 'none', color: 'var(--color-text-secondary)',
+                      borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    <Upload size={16} /> Upload dari Galeri
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => uploadKTP()}
+                    disabled={isProcessing}
+                    style={{
+                      width: '100%', padding: '12px', background: 'transparent',
+                      border: '1px dashed var(--color-primary)', color: 'var(--color-primary)',
+                      borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    {isProcessing ? <><Loader2 size={16} className="spin" /> Memproses...</> : 'Gunakan Simulasi KTP Default'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Step 2: OCR Review */}
-        {currentStep === 'ocr_review' && ocrData && (
+        {/* Step 2: OCR Review (Editable Form) */}
+        {currentStep === 'ocr_review' && (formOcr || ocrData) && (
           <div className="animate-fade-in-up">
-            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Cek Data KTP</h2>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
-              Data berikut dibaca otomatis dari KTP Anda. Pastikan sudah benar.
+            <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Cek & Edit Data KTP</h2>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+              Data berikut dibaca otomatis dari KTP. Anda dapat menyesuaikan atau mengedit data jika terdapat ketidaksesuaian dengan KTP fisik Anda.
             </p>
 
-            <div className="card" style={{ padding: 16, marginBottom: 24 }}>
-              <div style={{ display: 'grid', gap: 14, fontSize: 12 }}>
-                {[
-                  { label: 'NIK', value: ocrData.nik },
-                  { label: 'Nama Lengkap', value: ocrData.nama },
-                  { label: 'Tempat, Tanggal Lahir', value: `${ocrData.tempatLahir}, ${ocrData.tanggalLahir}` },
-                  { label: 'Jenis Kelamin', value: ocrData.jenisKelamin },
-                  { label: 'Alamat', value: `${ocrData.alamat} RT ${ocrData.rt}/RW ${ocrData.rw}` },
-                  { label: 'Kel/Desa', value: ocrData.kelurahan },
-                  { label: 'Kecamatan', value: ocrData.kecamatan },
-                  { label: 'Agama', value: ocrData.agama },
-                  { label: 'Status', value: ocrData.statusPerkawinan },
-                  { label: 'Pekerjaan', value: ocrData.pekerjaan },
-                  { label: 'Kewarganegaraan', value: ocrData.kewarganegaraan },
-                  { label: 'Berlaku Hingga', value: ocrData.berlakuHingga },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <span style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 2, fontSize: 11 }}>{label}</span>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>{value}</span>
+            <div className="card" style={{ padding: 16, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>NIK (Nomor Induk Kependudukan)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formOcr?.nik || ''}
+                    onChange={(e) => setFormOcr({ ...formOcr, nik: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Nama Lengkap (Sesuai KTP)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formOcr?.nama || ''}
+                    onChange={(e) => setFormOcr({ ...formOcr, nama: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Tempat Lahir</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formOcr?.tempatLahir || ''}
+                      onChange={(e) => setFormOcr({ ...formOcr, tempatLahir: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Tanggal Lahir</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formOcr?.tanggalLahir || ''}
+                      onChange={(e) => setFormOcr({ ...formOcr, tanggalLahir: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Jenis Kelamin</label>
+                  <select
+                    className="input"
+                    value={formOcr?.jenisKelamin || 'LAKI-LAKI'}
+                    onChange={(e) => setFormOcr({ ...formOcr, jenisKelamin: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+                  >
+                    <option value="LAKI-LAKI">LAKI-LAKI</option>
+                    <option value="PEREMPUAN">PEREMPUAN</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Alamat Lengkap</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formOcr?.alamat || ''}
+                    onChange={(e) => setFormOcr({ ...formOcr, alamat: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Kel/Desa</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formOcr?.kelurahan || ''}
+                      onChange={(e) => setFormOcr({ ...formOcr, kelurahan: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Kecamatan</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formOcr?.kecamatan || ''}
+                      onChange={(e) => setFormOcr({ ...formOcr, kecamatan: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Agama</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formOcr?.agama || ''}
+                      onChange={(e) => setFormOcr({ ...formOcr, agama: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Pekerjaan</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={formOcr?.pekerjaan || ''}
+                      onChange={(e) => setFormOcr({ ...formOcr, pekerjaan: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid var(--color-border)' }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <button className="btn-primary" onClick={confirmOCR} style={{ width: '100%', padding: '14px' }}>
-              Data Sudah Benar
+            <button className="btn-primary" onClick={handleConfirmOCR} style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <CheckCircle2 size={18} /> Simpan & Konfirmasi Data KTP
             </button>
           </div>
         )}
@@ -214,17 +574,43 @@ export default function KYCPage() {
         {currentStep === 'selfie_capture' && (
           <div className="animate-fade-in-up">
             <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Verifikasi Wajah</h2>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
               Lepaskan kacamata dan masker. Posisikan wajah Anda dalam bingkai yang disediakan.
             </p>
 
+            {cameraError && (
+              <div style={{ padding: '12px 14px', background: 'rgba(239,68,68,0.1)', borderRadius: 10, color: '#ef4444', fontSize: 12, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <XCircle size={16} />
+                <span>{cameraError}</span>
+              </div>
+            )}
+
+            {/* Oval Face Framing Container */}
             <div style={{
-              width: 220, height: 300, borderRadius: 110, margin: '0 auto 24px',
-              border: '4px solid var(--color-primary)', background: 'var(--color-surface-secondary)',
+              width: 230, height: 300, borderRadius: 115, margin: '0 auto 24px',
+              border: '4px solid var(--color-primary)', background: '#0f172a',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-              position: 'relative', overflow: 'hidden',
+              position: 'relative', overflow: 'hidden', boxShadow: '0 0 20px rgba(59,130,246,0.2)'
             }}>
-              {isProcessing ? (
+              {capturedImage ? (
+                // Show captured selfie preview
+                <img src={capturedImage} alt="Selfie Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : cameraActive ? (
+                // Show Live Selfie Stream
+                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+                  />
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    border: '2px dashed rgba(255,255,255,0.6)', borderRadius: 115, pointerEvents: 'none'
+                  }} />
+                </div>
+              ) : isProcessing ? (
                 <>
                   <div style={{
                     position: 'absolute', inset: 0,
@@ -232,19 +618,88 @@ export default function KYCPage() {
                     animation: 'pulse 1.5s ease-in-out infinite',
                   }} />
                   <Loader2 size={40} color="var(--color-primary)" className="spin" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>Mengambil Foto...</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>Memproses...</span>
                 </>
               ) : (
                 <>
                   <Camera size={48} color="var(--color-text-muted)" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)' }}>Siap Scan</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)' }}>Siap Scan Wajah</span>
                 </>
               )}
             </div>
 
-            <button className="btn-primary" onClick={captureSelfie} disabled={isProcessing} style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {isProcessing ? <><Loader2 size={18} className="spin" /> Memproses...</> : 'Ambil Selfie'}
-            </button>
+            {/* Action Buttons for Selfie */}
+            <div style={{ display: 'grid', gap: 10 }}>
+              {capturedImage ? (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={captureSelfie}
+                    disabled={isProcessing}
+                    style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    {isProcessing ? <><Loader2 size={18} className="spin" /> Memproses Selfie...</> : 'Gunakan Foto Ini'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCapturedImage(null);
+                      startCamera('user');
+                    }}
+                    disabled={isProcessing}
+                    style={{
+                      width: '100%', padding: '12px', background: 'transparent',
+                      border: '1px solid var(--color-surface-secondary)', color: 'var(--color-text-secondary)',
+                      borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    <RefreshCw size={16} /> Foto Ulang Selfie
+                  </button>
+                </>
+              ) : cameraActive ? (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={takeSnapshot}
+                    style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Camera size={18} /> Ambil Selfie
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    style={{
+                      width: '100%', padding: '10px', background: 'transparent',
+                      border: 'none', color: 'var(--color-text-muted)', fontSize: 13
+                    }}
+                  >
+                    Tutup Kamera
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="btn-primary"
+                    onClick={() => startCamera('user')}
+                    style={{ width: '100%', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <Video size={18} /> Buka Kamera Selfie
+                  </button>
+                  <button
+                    type="button"
+                    onClick={captureSelfie}
+                    disabled={isProcessing}
+                    style={{
+                      width: '100%', padding: '12px', background: 'var(--color-surface-secondary)',
+                      border: 'none', color: 'var(--color-text-secondary)',
+                      borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    Gunakan Simulasi Default
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -287,9 +742,7 @@ export default function KYCPage() {
         {currentStep === 'result' && (
           <div className="animate-scale-in" style={{ textAlign: 'center', padding: '24px 0' }}>
             {faceMatchPassed ? (
-              // Face match passed — submit to officer queue
               user.kycStatus === 'pending' ? (
-                // Already submitted
                 <>
                   <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(251,191,36,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                     <Clock size={40} color="#f59e0b" />
@@ -309,7 +762,6 @@ export default function KYCPage() {
                   </button>
                 </>
               ) : (
-                // Ready to submit
                 <>
                   <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                     <CheckCircle2 size={40} color="var(--color-success)" />
@@ -341,7 +793,6 @@ export default function KYCPage() {
                 </>
               )
             ) : (
-              // Face match failed
               <>
                 <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                   <XCircle size={40} color="#ef4444" />

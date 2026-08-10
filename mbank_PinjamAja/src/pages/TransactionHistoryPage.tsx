@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Filter, Search } from 'lucide-react';
 import { useSavingsStore } from '@/stores/savingsStore';
+import { useAuthStore } from '@/stores/authStore';
 import { formatRupiah, formatDate, formatTime, getTransactionLabel, isIncomeTransaction } from '@/helpers/format';
 import StatusBadge from '@/components/StatusBadge';
 import PageHeader from '@/components/PageHeader';
@@ -20,8 +21,14 @@ const FILTER_OPTIONS = [
 
 export default function TransactionHistoryPage() {
   const navigate = useNavigate();
-  const transactions = useSavingsStore((s) => s.transactions);
+  const user = useAuthStore((s) => s.user);
+  const allTransactions = useSavingsStore((s) => s.transactions);
   const accounts = useSavingsStore((s) => s.accounts);
+
+  const userAccountIds = accounts.filter((a) => a.userId === user?.id).map((a) => a.id);
+  const transactions = allTransactions.filter(
+    (tx) => (userAccountIds.length > 0 && userAccountIds.includes(tx.accountId)) || tx.userId === user?.id
+  );
 
   const [filter, setFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

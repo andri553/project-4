@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { User, UserRole, Permission } from '@/types';
-import { mockUsers } from '@/data/users';
 
 interface AuthContextType {
   user: User | null;
@@ -139,28 +138,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mappedUser);
         localStorage.setItem('securenusa-user', JSON.stringify(mappedUser));
         return true;
-      } else if (res.status === 429 || !json.success) {
-        throw new Error(json.message || 'Invalid credentials');
+      } else {
+        // Login gagal — kembalikan false, jangan fallback ke mock
+        console.error('Login failed:', json.message);
+        return false;
       }
     } catch (e: any) {
-      console.warn('Backend login failed', e);
-      throw e;
+      console.error('Backend login error:', e.message);
+      return false;
     }
-
-    const foundUser = mockUsers.find(u => u.email === _email);
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('securenusa-user', JSON.stringify(foundUser));
-      localStorage.setItem('auth_token', 'mock_token');
-      localStorage.setItem('token', 'mock_token');
-      return true;
-    }
-    const cisoUser = mockUsers.find(u => u.role === 'ciso')!;
-    setUser(cisoUser);
-    localStorage.setItem('securenusa-user', JSON.stringify(cisoUser));
-    localStorage.setItem('auth_token', 'mock_token');
-    localStorage.setItem('token', 'mock_token');
-    return true;
   }, []);
 
   const loginAsRole = useCallback(async (role: UserRole) => {
@@ -176,28 +162,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const email = ROLE_EMAILS[role];
     if (email) {
-      try {
-        const success = await login(email, 'CISO123!');
-        if (success) return;
-      } catch (err: any) {
-        alert(`Login failed: ${err.message || 'Backend connection error'}`);
-        return;
+      const success = await login(email, 'CISO123!');
+      if (!success) {
+        alert(`Login gagal untuk role ${role}. Pastikan backend berjalan di localhost:4000.`);
       }
-    }
-
-    const roleUser = mockUsers.find(u => u.role === role);
-    if (roleUser) {
-      setUser(roleUser);
-      localStorage.setItem('securenusa-user', JSON.stringify(roleUser));
-      localStorage.setItem('auth_token', 'mock_token');
-      localStorage.setItem('token', 'mock_token');
     }
   }, [login]);
 
   useEffect(() => {
     const validateToken = async () => {
       const token = localStorage.getItem('auth_token');
-      if (!token || token === 'mock_token') return;
+      // Jika tidak ada token atau masih pakai mock_token lama, paksa logout
+      if (!token || token === 'mock_token') {
+        logout();
+        return;
+      }
       try {
         const res = await fetch('/api/v1/auth/me', {
           headers: {
@@ -222,6 +201,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(mappedUser);
           localStorage.setItem('securenusa-user', JSON.stringify(mappedUser));
         } else {
+          // Token expired or invalid — try refresh before logout
+          const refreshToken = localStorage.getItem('auth_refresh_token');
+          if (refreshToken) {
+            try {
+              const refreshRes = await fetch('/api/v1/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken }),
+              });
+              const refreshJson = await refreshRes.json();
+              if (refreshJson.success && refreshJson.data?.token) {
+                // Save new tokens
+                localStorage.setItem('auth_token', refreshJson.data.token);
+                localStorage.setItem('token', refreshJson.data.token);
+                if (refreshJson.data.refreshToken) {
+                  localStorage.setItem('auth_refresh_token', refreshJson.data.refreshToken);
+                }
+                // Re-fetch user profile with new token
+                const retryRes = await fetch('/api/v1/auth/me', {
+                  headers: { 'Authorization': `Bearer ${refreshJson.data.token}` }
+                });
+                const retryJson = await retryRes.json();
+                if (retryJson.success && retryJson.data?.user) {
+                  const bu = retryJson.data.user;
+                  const mappedUser: User = {
+                    id: bu.id,
+                    name: bu.fullName,
+                    email: bu.email,
+                    role: bu.role,
+                    avatar: bu.avatarUrl || bu.fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+                    department: '',
+                    title: '',
+                    lastLogin: bu.lastLoginAt || new Date().toISOString(),
+                    mfaEnabled: bu.mfaEnabled,
+                    status: bu.isActive ? 'Active' : 'Inactive'
+                  };
+                  setUser(mappedUser);
+                  localStorage.setItem('securenusa-user', JSON.stringify(mappedUser));
+                  console.log('[Auth] Token refreshed and user profile restored');
+                  return;
+                }
+              }
+            } catch (refreshErr) {
+              console.warn('[Auth] Refresh token attempt failed', refreshErr);
+            }
+          }
+          // All refresh attempts failed — force logout
           logout();
         }
       } catch (err) {

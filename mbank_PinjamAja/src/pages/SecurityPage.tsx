@@ -30,18 +30,13 @@ export default function SecurityPage() {
     if (type === 'biometric') {
       const nextVal = !biometricEnabled;
       setBiometricEnabled(nextVal);
-      await enableBiometricDirectly(nextVal);
-      setToastMessage(nextVal ? 'Biometrik login diaktifkan' : 'Biometrik login dinonaktifkan');
+      await useAuthStore.getState().updateSecuritySettings({ biometricEnabled: nextVal });
+      setToastMessage(nextVal ? 'Biometrik login diaktifkan & disinkronkan ke SecureNusa' : 'Biometrik login dinonaktifkan');
     } else {
       const nextVal = !mfaEnabled;
       setMfaEnabled(nextVal);
-      useAuthStore.setState(state => {
-        if (state.user) {
-          return { user: { ...state.user, mfaEnabled: nextVal } };
-        }
-        return {};
-      });
-      setToastMessage(nextVal ? 'MFA diaktifkan' : 'MFA dinonaktifkan');
+      await useAuthStore.getState().updateSecuritySettings({ mfaEnabled: nextVal });
+      setToastMessage(nextVal ? 'MFA diaktifkan & disinkronkan ke SecureNusa' : 'MFA dinonaktifkan');
       logAudit(user.id, user.fullName, 'SECURITY', 'MFA_TOGGLED', `MFA two-factor authentication ${nextVal ? 'enabled' : 'disabled'}`);
     }
     

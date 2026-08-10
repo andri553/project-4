@@ -45,7 +45,7 @@ const sidebarGroups: SidebarGroup[] = [
   {
     title: 'OPERATIONS',
     items: [
-      { id: 'incidents', label: 'Incident Management', icon: <AlertTriangle size={20} />, path: '/incidents', roles: ['super_admin', 'ciso', 'soc_analyst'], badge: 3, badgeType: 'danger' },
+      { id: 'incidents', label: 'Incident Management', icon: <AlertTriangle size={20} />, path: '/incidents', roles: ['super_admin', 'ciso', 'soc_analyst'] },
       { id: 'vulnerability', label: 'Vulnerability Management', icon: <Bug size={20} />, path: '/vulnerability', roles: ['super_admin', 'ciso', 'soc_analyst', 'it_infrastructure'] },
       { id: 'assets', label: 'Asset Management', icon: <Server size={20} />, path: '/assets', roles: ['super_admin', 'ciso', 'soc_analyst', 'it_infrastructure'] },
     ],

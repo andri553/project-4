@@ -119,23 +119,13 @@ export const chatController = {
       // ============================================
       const faqText = FAQ_DATA.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n\n');
 
-      const systemPrompt = `Kamu adalah "PinjamAJA AI Assistant", asisten virtual resmi aplikasi fintech PinjamAJA.
+      const systemPrompt = `Kamu adalah teman ngobrol pintar berbasis AI. Posisikan dirimu layaknya AI canggih seperti ChatGPT atau Gemini yang sangat ramah, asyik diajak ngobrol, dan berwawasan luas.
 
-ATURAN KETAT YANG WAJIB DIPATUHI:
-1. Kamu HANYA boleh menjawab pertanyaan seputar layanan PinjamAJA (tabungan, pinjaman, QRIS, asuransi, keamanan akun, KYC).
-2. Kamu TIDAK BOLEH menjawab pertanyaan di luar konteks PinjamAJA (politik, berita umum, coding, resep masakan, dll). Jika ditanya hal di luar konteks, jawab: "Maaf, saya hanya bisa membantu pertanyaan seputar layanan PinjamAJA."
-3. Gunakan data user dari database di bawah ini untuk menjawab pertanyaan tentang saldo, pinjaman, dan transaksi. JANGAN mengarang data.
-4. Jika user melaporkan masalah keamanan serius (akun di-hack, diretas, penipuan, kehilangan dana mencurigakan), WAJIB tampilkan pesan berikut:
-
----ESKALASI KEAMANAN---
-Keluhan keamanan ini memerlukan penanganan tim investigasi. Silakan hubungi:
-📧 Email: andri@student.president.ac.id
-📱 WhatsApp: +62 819-0000-0002
-Mohon sertakan nama lengkap dan nomor HP terdaftar Anda saat menghubungi.
----END ESKALASI---
-
-5. Jawab dalam Bahasa Indonesia yang ramah dan profesional.
-6. Jika tidak tahu jawabannya dan tidak ada di FAQ atau database, jawab jujur "Maaf, saya tidak memiliki informasi tersebut. Silakan hubungi customer service kami."
+ATURAN UTAMA:
+1. Bersikaplah santai, interaktif, dan luwes. Kamu boleh pakai bahasa sehari-hari yang enak dibaca (santai tapi sopan). Jangan kaku seperti robot bank.
+2. Kamu BEBAS menjawab pertanyaan apa saja dari user (dari ngoding, sains, curhat, sampai resep masakan). Jika ditanya tentang layanan PinjamAJA (pinjaman, saldo, dll), kamu bisa menjawabnya menggunakan data user di bawah ini. JANGAN mengarang data finansial.
+3. Jika user melaporkan masalah keamanan serius (akun di-hack, penipuan), beri tahu mereka untuk segera email ke andri@student.president.ac.id.
+4. Buat jawaban yang seru, engaging, dan mengalir seperti sedang chat dengan teman AI yang cerdas!
 
 ${userContext}
 
@@ -154,7 +144,8 @@ ${faqText}
         });
       }
 
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      // Switching to gemini-1.5-flash-latest to bypass the gemini-2.0-flash rate limits
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
       // Build conversation history for context
       const chatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
@@ -200,7 +191,7 @@ ${faqText}
     } catch (error: any) {
       console.error('Chat AI Error:', error);
       
-      // Handle specific Gemini errors
+      // Handle specific API KEY missing/invalid error
       if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('API key not valid')) {
         return res.status(503).json({
           success: false,
@@ -208,10 +199,34 @@ ${faqText}
         });
       }
 
-      return res.status(500).json({
-        success: false,
-        message: 'Gagal memproses pesan. Silakan coba lagi.',
-        error: error.message
+      console.warn('Gemini API failed (Quota/NotFound/Error). Using fallback offline FAQ matcher.');
+      
+      // Simple offline fallback matching using req.body.message
+      const msgLower = (req.body.message || '').toLowerCase();
+      let fallbackResponse = 'Maaf, layanan AI saat ini sedang mengalami batas limit (Quota Exceeded) atau gangguan koneksi. Namun, jika Anda memiliki keluhan keamanan silakan hubungi andri@student.president.ac.id';
+      
+      for (const faq of FAQ_DATA) {
+        // Check if any word in the question matches the user's message
+        if (msgLower.includes('password') || msgLower.includes('sandi')) {
+          fallbackResponse = FAQ_DATA.find(f => f.q.toLowerCase().includes('password'))?.a || fallbackResponse;
+          break;
+        }
+        if (msgLower.includes('qris')) {
+          fallbackResponse = FAQ_DATA.find(f => f.q.toLowerCase().includes('qris'))?.a || fallbackResponse;
+          break;
+        }
+        if (msgLower.includes('pinjam') || msgLower.includes('syarat')) {
+          fallbackResponse = FAQ_DATA.find(f => f.q.toLowerCase().includes('syarat'))?.a || fallbackResponse;
+          break;
+        }
+      }
+      
+      return res.json({
+        success: true,
+        data: {
+          response: fallbackResponse,
+          isSecurityAlert: false
+        }
       });
     }
   }

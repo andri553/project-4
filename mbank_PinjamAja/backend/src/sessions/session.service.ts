@@ -3,6 +3,7 @@ import { prisma } from '../config/prisma';
 import { logger } from '../logger/logger';
 import { securityService } from '../security/security.service';
 import { redisClient, getRedisStatus } from '../redis/redis';
+import { incidentService } from '../services/incident.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'enterprise_access_token_secret';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'enterprise_refresh_token_secret';
@@ -29,6 +30,43 @@ export class SessionService {
     const expiresDays = 30; // 30 days absolute timeout
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresDays);
+
+    // Detect concurrent active sessions for the same user account
+    const existingActiveSessions = await prisma.session.findMany({
+      where: {
+        userId: data.userId,
+        status: 'ACTIVE'
+      }
+    });
+
+    if (existingActiveSessions.length > 0) {
+      const user = await prisma.user.findUnique({ where: { id: data.userId } });
+      logger.info(`Concurrent session detected for ${user?.email || data.userId}`);
+
+      // 2. Generate Notification for the User
+      await prisma.notification.create({
+        data: {
+          userId: data.userId,
+          title: 'Peringatan Akses Perangkat Lain',
+          message: `Akun Anda baru saja diakses dari perangkat lain (${data.browser || 'Browser'} / ${data.operatingSystem || 'OS'}) saat sesi Anda masih aktif.`,
+          type: 'security',
+          isRead: false,
+          isMock: user?.isMock || false,
+          isArchived: false,
+        }
+      });
+
+      // 3. Security Event Log
+      await securityService.log({
+        userId: data.userId,
+        category: 'Session Anomaly',
+        sourceModule: 'session_service',
+        severity: 'High',
+        riskScore: 25,
+        description: `Concurrent session login detected for ${user?.email || data.userId}. Active existing sessions: ${existingActiveSessions.length}.`,
+        status: 'OPEN'
+      });
+    }
 
     const session = await prisma.session.create({
       data: {

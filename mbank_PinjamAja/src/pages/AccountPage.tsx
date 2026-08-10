@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LogOut, ChevronRight, Shield, Smartphone, Bell, HelpCircle,
@@ -14,6 +15,21 @@ export default function AccountPage() {
   const user = useAuthStore((s) => s.user)!;
   const logout = useAuthStore((s) => s.logout);
   const kyc = useKYCStore((s) => s.getVerificationByUserId(user.id));
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleToggleMFA = async () => {
+    const nextVal = !user.mfaEnabled;
+    await useAuthStore.getState().updateSecuritySettings({ mfaEnabled: nextVal });
+    setToastMessage(nextVal ? 'MFA diaktifkan & diperbarui ke SecureNusa' : 'MFA dinonaktifkan & diperbarui ke SecureNusa');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleToggleBiometrics = async () => {
+    const nextVal = !user.biometricEnabled;
+    await useAuthStore.getState().updateSecuritySettings({ biometricEnabled: nextVal });
+    setToastMessage(nextVal ? 'Biometrik diaktifkan & diperbarui ke SecureNusa' : 'Biometrik dinonaktifkan & diperbarui ke SecureNusa');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const profile = profiles.find((p) => p.userId === user.id);
   const userDevices = devices.filter((d) => d.userId === user.id);
@@ -43,6 +59,19 @@ export default function AccountPage() {
 
   return (
     <div style={{ paddingBottom: 80 }}>
+      {toastMessage && (
+        <div style={{
+          position: 'fixed', bottom: 75, left: '50%', transform: 'translateX(-50%)',
+          background: '#0F172A', color: 'white',
+          padding: '10px 18px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+          zIndex: 9999, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8,
+          border: '1px solid #334155'
+        }}>
+          <CheckCircle2 size={16} color="#10B981" />
+          {toastMessage}
+        </div>
+      )}
+
       {/* Profile Header — Clean white style */}
       <div
         className="safe-top animate-fade-in"
@@ -177,24 +206,41 @@ export default function AccountPage() {
         {/* Security Features */}
         <div className="card animate-fade-in-up" style={{ padding: '16px', marginBottom: 16 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Keamanan</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Lock size={16} color="var(--color-text-muted)" />
                 <span style={{ fontSize: 13 }}>Multi-Factor Auth</span>
               </div>
-              <span className={`badge ${user.mfaEnabled ? 'badge-success' : 'badge-neutral'}`}>
-                {user.mfaEnabled ? 'Aktif' : 'Nonaktif'}
-              </span>
+              <button 
+                onClick={handleToggleMFA}
+                style={{
+                  background: user.mfaEnabled ? 'var(--color-success-light)' : 'var(--color-surface-secondary)',
+                  color: user.mfaEnabled ? 'var(--color-success)' : 'var(--color-text-secondary)',
+                  border: 'none', padding: '6px 12px', borderRadius: '16px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {user.mfaEnabled ? 'Aktif' : 'Aktifkan'}
+              </button>
             </div>
+            
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Fingerprint size={16} color="var(--color-text-muted)" />
-                <span style={{ fontSize: 13 }}>Biometrik</span>
+                <span style={{ fontSize: 13 }}>Biometrik (Sidik Jari)</span>
               </div>
-              <span className={`badge ${user.biometricEnabled ? 'badge-success' : 'badge-neutral'}`}>
-                {user.biometricEnabled ? 'Aktif' : 'Nonaktif'}
-              </span>
+              <button 
+                onClick={handleToggleBiometrics}
+                style={{
+                  background: user.biometricEnabled ? 'var(--color-success-light)' : 'var(--color-surface-secondary)',
+                  color: user.biometricEnabled ? 'var(--color-success)' : 'var(--color-text-secondary)',
+                  border: 'none', padding: '6px 12px', borderRadius: '16px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {user.biometricEnabled ? 'Aktif' : 'Aktifkan'}
+              </button>
             </div>
           </div>
         </div>

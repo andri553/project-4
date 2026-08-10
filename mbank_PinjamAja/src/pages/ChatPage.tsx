@@ -90,14 +90,13 @@ export default function ChatPage() {
     {
       id: 'welcome',
       sender: 'bot',
-      text: `Halo ${user.fullName}! 👋\n\nSaya **PinjamAJA AI Assistant** — powered by Google Gemini AI.\n\nSaya bisa bantu:\n• Cek saldo & riwayat transaksi Anda\n• Info pinjaman aktif\n• Jawab pertanyaan seputar produk PinjamAJA\n• Eskalasi masalah keamanan ke admin\n\nSilakan tanya apa saja!`,
+      text: `Halo ${user.fullName} 🤖!\n\nApakah ada transaksi atau layanan PinjamAJA yang ingin Anda tanyakan hari ini?\nSaya siap membantu Anda.`,
       timestamp: new Date()
     }
   ]);
   
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -111,7 +110,6 @@ export default function ChatPage() {
 
   const sendMessageToAPI = async (messageText: string) => {
     setIsLoading(true);
-    setShowSuggestions(false);
 
     const userMsg: Message = {
       id: `msg-${Date.now()}-user`,
@@ -162,7 +160,7 @@ export default function ChatPage() {
       const errorMsg: Message = {
         id: `msg-${Date.now()}-bot`,
         sender: 'bot',
-        text: `Tidak dapat terhubung ke server AI. Pastikan backend berjalan.\n\nError: ${error.message || 'Network error'}`,
+        text: `Tidak dapat terhubung ke server AI.\n\nError: ${error.message || 'Network error'}`,
         timestamp: new Date(),
         isError: true,
         isNew: true
@@ -184,7 +182,6 @@ export default function ChatPage() {
     sendMessageToAPI(suggestion);
   };
 
-  // Simple markdown-ish renderer for bold text
   const renderText = (text: string) => {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     return parts.map((part, i) => {
@@ -196,130 +193,116 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-bg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#FAFAFA' }}>
       <PageHeader title="AI Assistant" onBack={() => navigate('/help')} />
 
-      {/* Gemini Badge */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        padding: '6px 0', background: 'linear-gradient(90deg, rgba(66,133,244,0.08), rgba(156,39,176,0.08), rgba(244,180,0,0.08))',
-        borderBottom: '1px solid var(--color-border)', fontSize: 10, color: 'var(--color-text-muted)'
-      }}>
-        <Sparkles size={10} style={{ color: '#9C27B0' }} />
-        Powered by <strong style={{ color: 'var(--color-text-secondary)', marginLeft: 2 }}>Google Gemini AI</strong>
-        <span style={{ margin: '0 4px' }}>•</span>
-        Filtered with PinjamAJA Database
-      </div>
-
       {/* Messages Feed */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {messages.map((msg) => {
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {messages.map((msg, index) => {
           const isBot = msg.sender === 'bot';
+          const isLast = index === messages.length - 1;
+
           return (
             <div
               key={msg.id}
               style={{
                 display: 'flex',
-                justifyContent: isBot ? 'flex-start' : 'flex-end',
-                alignItems: 'start',
+                flexDirection: 'column',
+                alignItems: isBot ? 'flex-start' : 'flex-end',
                 gap: 8,
-                maxWidth: '88%',
+                maxWidth: '90%',
                 alignSelf: isBot ? 'flex-start' : 'flex-end',
                 animation: 'fade-in 0.3s ease'
               }}
             >
-              {isBot && (
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: msg.isSecurityAlert
-                    ? 'rgba(239,68,68,0.15)'
-                    : msg.isError
-                      ? 'rgba(245,158,11,0.15)'
-                      : 'linear-gradient(135deg, rgba(66,133,244,0.15), rgba(156,39,176,0.15))',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, marginTop: 4
-                }}>
-                  {msg.isError ? (
-                    <WifiOff size={13} color="#F59E0B" />
-                  ) : (
-                    <Bot size={13} color={msg.isSecurityAlert ? '#EF4444' : '#7C3AED'} />
-                  )}
-                </div>
-              )}
-              <div
-                style={{
-                  background: msg.isSecurityAlert
-                    ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.15))'
-                    : msg.isError
-                      ? 'rgba(245,158,11,0.08)'
-                      : isBot
-                        ? 'var(--color-surface)'
-                        : 'linear-gradient(135deg, var(--color-primary), #7C3AED)',
-                  color: isBot ? 'var(--color-text-primary)' : 'white',
-                  border: msg.isSecurityAlert
-                    ? '1.5px solid rgba(239,68,68,0.3)'
-                    : msg.isError
-                      ? '1px solid rgba(245,158,11,0.3)'
-                      : isBot
-                        ? '1px solid var(--color-border)'
-                        : 'none',
-                  borderRadius: isBot ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-                  padding: '12px 14px',
-                  boxShadow: 'var(--shadow-sm)',
-                  fontSize: 12.5,
-                  lineHeight: 1.6,
-                  whiteSpace: 'pre-line'
-                }}
-              >
-                {msg.isNew ? (
-                  <TypewriterMessage 
-                    text={msg.text} 
-                    renderFn={renderText} 
-                    onComplete={() => {
-                      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isNew: false } : m));
-                    }} 
-                  />
-                ) : (
-                  renderText(msg.text)
-                )}
-
-                {/* Security Escalation Buttons */}
-                {msg.isSecurityAlert && (
-                  <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <a
-                      href={`mailto:andri@student.president.ac.id?subject=BANTUAN DARURAT: Akun Diretas - ${user.fullName}&body=Halo Admin, akun saya terindikasi diretas. Mohon bantuan investigasi darurat.%0D%0ANama: ${user.fullName}%0D%0ANomor HP: ${user.phoneNumber}`}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        background: '#EF4444', color: 'white', padding: '10px 12px', borderRadius: 10,
-                        fontWeight: 700, textDecoration: 'none', textAlign: 'center', fontSize: 11
-                      }}
-                    >
-                      <Mail size={13} /> Kirim Email Darurat
-                    </a>
-                    <a
-                      href="https://wa.me/6281900000002"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        background: '#10B981', color: 'white', padding: '10px 12px', borderRadius: 10,
-                        fontWeight: 700, textDecoration: 'none', textAlign: 'center', fontSize: 11
-                      }}
-                    >
-                      <Phone size={13} /> Hubungi WhatsApp Admin <ExternalLink size={10} />
-                    </a>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'start', flexDirection: isBot ? 'row' : 'row-reverse' }}>
+                {isBot && (
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: 'white', border: '1px solid #E5E7EB',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Bot size={18} color="#374151" />
                   </div>
                 )}
-              </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div
+                    style={{
+                      background: msg.isSecurityAlert ? '#FEF2F2' : msg.isError ? '#FFFBEB' : isBot ? 'white' : '#7C3AED',
+                      color: isBot ? '#1F2937' : 'white',
+                      border: msg.isSecurityAlert ? '1px solid #FCA5A5' : msg.isError ? '1px solid #FCD34D' : isBot ? '1px solid #E5E7EB' : 'none',
+                      borderRadius: isBot ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+                      padding: '14px 18px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      whiteSpace: 'pre-line'
+                    }}
+                  >
+                    {msg.isNew ? (
+                      <TypewriterMessage 
+                        text={msg.text} 
+                        renderFn={renderText} 
+                        onComplete={() => {
+                          setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isNew: false } : m));
+                        }} 
+                      />
+                    ) : (
+                      renderText(msg.text)
+                    )}
 
-              {!isBot && (
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: 'var(--color-primary-50)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, marginTop: 4
-                }}>
-                  <User size={13} color="var(--color-primary)" />
+                    {/* Security Escalation Buttons */}
+                    {msg.isSecurityAlert && (
+                      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <a
+                          href={`mailto:andri@student.president.ac.id?subject=BANTUAN DARURAT`}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            background: '#EF4444', color: 'white', padding: '10px 12px', borderRadius: 8,
+                            fontWeight: 600, textDecoration: 'none', textAlign: 'center', fontSize: 13
+                          }}
+                        >
+                          <Mail size={14} /> Hubungi Investigasi
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Volume Icon below bot message */}
+                  {isBot && (
+                    <div style={{ display: 'flex', alignItems: 'center', color: '#9CA3AF', paddingLeft: 4 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* If this is the latest bot message, show suggestion pills right below it */}
+              {isBot && isLast && !isLoading && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4, marginLeft: 48 }}>
+                  {SUGGESTIONS.slice(0, 4).map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSuggestionClick(s)}
+                      style={{
+                        background: '#E5E7EB', border: 'none',
+                        borderRadius: 16, padding: '8px 14px', fontSize: 13,
+                        cursor: 'pointer', color: '#374151',
+                        transition: 'background 0.2s', fontWeight: 500,
+                        textAlign: 'left'
+                      }}
+                      onMouseEnter={(e) => (e.target as HTMLElement).style.background = '#D1D5DB'}
+                      onMouseLeave={(e) => (e.target as HTMLElement).style.background = '#E5E7EB'}
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -328,56 +311,32 @@ export default function ChatPage() {
 
         {/* Typing Indicator */}
         {isLoading && (
-          <div style={{
-            display: 'flex', alignItems: 'start', gap: 8, maxWidth: '70%',
-            animation: 'fade-in 0.3s ease'
-          }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'start', animation: 'fade-in 0.3s ease' }}>
             <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(66,133,244,0.15), rgba(156,39,176,0.15))',
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'white', border: '1px solid #E5E7EB',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
             }}>
-              <Bot size={13} color="#7C3AED" />
+              <Bot size={18} color="#374151" />
             </div>
             <div style={{
-              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+              background: 'white', border: '1px solid #E5E7EB',
               borderRadius: '4px 16px 16px 16px', padding: '14px 18px',
-              display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
-              color: 'var(--color-text-muted)'
+              display: 'flex', alignItems: 'center', gap: 8, fontSize: 14,
+              color: '#6B7280', boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}>
-              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-              Gemini AI sedang berpikir...
-            </div>
-          </div>
-        )}
-
-        {/* Quick Suggestions */}
-        {showSuggestions && messages.length <= 1 && (
-          <div style={{ marginTop: 8 }}>
-            <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 8 }}>💡 Coba tanyakan:</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {SUGGESTIONS.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSuggestionClick(s)}
-                  style={{
-                    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-                    borderRadius: 20, padding: '6px 12px', fontSize: 11,
-                    cursor: 'pointer', color: 'var(--color-primary)',
-                    transition: 'all 0.2s', fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLElement).style.background = 'var(--color-primary-50)';
-                    (e.target as HTMLElement).style.borderColor = 'var(--color-primary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLElement).style.background = 'var(--color-surface)';
-                    (e.target as HTMLElement).style.borderColor = 'var(--color-border)';
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
+              <div className="typing-dots">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
+              <style>{`
+                .typing-dots { display: flex; gap: 4px; }
+                .dot { width: 6px; height: 6px; background: #9CA3AF; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+                .dot:nth-child(1) { animation-delay: -0.32s; }
+                .dot:nth-child(2) { animation-delay: -0.16s; }
+                @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+              `}</style>
             </div>
           </div>
         )}
@@ -385,54 +344,53 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Bar */}
-      <form
-        onSubmit={handleSendMessage}
-        style={{
-          padding: '12px 16px',
-          background: 'var(--color-surface)',
-          borderTop: '1px solid var(--color-border)',
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center'
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="text"
-          className="input-field"
-          placeholder={isLoading ? "Menunggu respons AI..." : "Tanyakan sesuatu ke AI..."}
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          disabled={isLoading}
+      {/* Input Bar Section */}
+      <div style={{ padding: '16px', background: 'white', borderTop: '1px solid #E5E7EB' }}>
+        <form
+          onSubmit={handleSendMessage}
           style={{
-            flex: 1, borderRadius: 20, padding: '10px 16px', height: 42,
-            opacity: isLoading ? 0.6 : 1
-          }}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !inputText.trim()}
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: '50%',
-            background: isLoading || !inputText.trim()
-              ? 'var(--color-text-muted)'
-              : 'linear-gradient(135deg, var(--color-primary), #7C3AED)',
-            border: 'none',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
-            color: 'white',
-            transition: 'all 0.2s',
-            boxShadow: isLoading || !inputText.trim() ? 'none' : '0 2px 8px rgba(124,58,237,0.3)'
+            gap: 12,
+            alignItems: 'center'
           }}
         >
-          {isLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} />}
-        </button>
-      </form>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder={isLoading ? "Menunggu respons..." : "Search or type a message..."}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            disabled={isLoading}
+            style={{
+              flex: 1, borderRadius: 8, border: '1px solid #E5E7EB',
+              padding: '12px 16px', height: 48, fontSize: 14,
+              outline: 'none', background: 'white',
+              opacity: isLoading ? 0.6 : 1
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#9CA3AF'}
+            onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !inputText.trim()}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 8,
+              background: isLoading || !inputText.trim() ? '#9CA3AF' : '#8CA3B8',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: isLoading || !inputText.trim() ? 'default' : 'pointer',
+              color: 'white',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Send size={20} style={{ marginLeft: 2 }} />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

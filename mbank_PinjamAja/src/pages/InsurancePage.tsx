@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, FileText, AlertCircle, ChevronRight } from 'lucide-react';
 import { formatRupiah, formatDate, formatCompact } from '@/helpers/format';
 import { useInsuranceStore } from '@/stores/insuranceStore';
+import { useAuthStore } from '@/stores/authStore';
 import StatusBadge from '@/components/StatusBadge';
 import PageHeader from '@/components/PageHeader';
 
@@ -10,10 +11,14 @@ type Tab = 'products' | 'policies' | 'claims';
 
 export default function InsurancePage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState<Tab>('products');
   const products = useInsuranceStore((s) => s.products);
-  const policies = useInsuranceStore((s) => s.policies);
-  const claims = useInsuranceStore((s) => s.claims);
+  const allPolicies = useInsuranceStore((s) => s.policies);
+  const allClaims = useInsuranceStore((s) => s.claims);
+
+  const policies = allPolicies.filter((p) => p.userId === user?.id);
+  const claims = allClaims.filter((c) => c.userId === user?.id);
 
   const tabItems: { key: Tab; label: string }[] = [
     { key: 'products', label: 'Produk' },

@@ -9,6 +9,7 @@ import { verifyPassword } from '../utils/hash';
 import { logger } from '../logger/logger';
 import { securityService } from '../security/security.service';
 import { eventBus } from '../eventbus/eventbus';
+import { incidentService } from '../services/incident.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'enterprise_access_token_secret';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'enterprise_refresh_token_secret';
@@ -32,6 +33,10 @@ export interface SessionContext {
 export class AuthService {
   private failedPins = new Map<string, number>(); // userId -> count
   private failedOtps = new Map<string, number>(); // phone -> count
+
+  public resetFailedPins(userId: string) {
+    this.failedPins.delete(userId);
+  }
 
   // Standard Login (email/password for Admin/CISO compatibility)
   async login(email: string, password: string, context: SessionContext) {
@@ -139,7 +144,8 @@ export class AuthService {
     return { 
       success: true, 
       message: 'OTP terkirim ke nomor Anda (Gunakan kode: 123456)',
-      exists: !!user
+      exists: !!user,
+      mfaEnabled: user ? user.mfaEnabled : false
     };
   }
 
@@ -217,6 +223,16 @@ export class AuthService {
       // Failed PIN attempt -> Risk +5
       await this.incrementUserRisk(userId, 5, `Wrong PIN entered (${currentFailed}/5)`);
 
+      // Create Security Incident for PIN failure (so it immediately shows in Incident Management for CISO review)
+      await incidentService.createIncident({
+        userId,
+        title: currentFailed >= 5 ? 'Brute Force PIN Attack Detected' : `PIN Verification Failure (${currentFailed}/5)`,
+        description: `User ${user.email} entered incorrect PIN (Attempt ${currentFailed}/5). ${currentFailed >= 5 ? 'Account locked for security.' : 'Logged for CISO incident review.'}`,
+        severity: currentFailed >= 5 ? 'CRITICAL' : currentFailed >= 3 ? 'HIGH' : 'MEDIUM',
+        isMock: user.isMock,
+        isArchived: false
+      });
+
       // 5x wrong PIN -> Lock account completely
       if (currentFailed >= 5) {
         await prisma.user.update({
@@ -228,17 +244,6 @@ export class AuthService {
         await prisma.session.updateMany({
           where: { userId, status: 'ACTIVE' },
           data: { status: 'REVOKED' }
-        });
-
-        // Raise incident to SecureNusa
-        await prisma.securityIncident.create({
-          data: {
-            userId,
-            title: 'Brute Force PIN Attack Detected',
-            description: `User account locked due to 5 consecutive PIN verification failures. Target user: ${user.email}`,
-            severity: 'CRITICAL',
-            status: 'OPEN'
-          }
         });
 
         await securityService.log({

@@ -11,6 +11,7 @@ import { transactionRepository } from '../repositories/transaction.repository';
 import { correlationService } from '../services/correlation.service';
 import { riskEngineService } from '../services/risk-engine.service';
 import { incidentService } from '../services/incident.service';
+import { authService } from '../auth/auth.service';
 
 export class SecurityController {
   // Users Read Model
@@ -362,8 +363,13 @@ export class SecurityController {
       }
 
       const avgFaceMatchScore = faceMatchCount > 0 ? Math.round(totalFaceMatchScore / faceMatchCount) : 0;
-      const avgOcrAccuracy = ocrCount > 0 ? Math.round(totalOcrConfidence / ocrCount) : 95; // default/simulated baseline
-      const avgVerifTimeSeconds = verifTimeCount > 0 ? Math.round(totalVerifTimeMs / (verifTimeCount * 1000)) : 120; // default 2 minutes
+      const avgOcrAccuracy = ocrCount > 0 ? Math.round(totalOcrConfidence / ocrCount) : 0;
+      const avgVerifTimeSeconds = verifTimeCount > 0 ? Math.round(totalVerifTimeMs / (verifTimeCount * 1000)) : 0;
+
+      // Real calculation of trusted device ratio
+      const totalDevices = await prisma.device.count({ where: { isArchived: false } });
+      const trustedDevices = await prisma.device.count({ where: { isArchived: false, isTrusted: true } });
+      const trustedDeviceRatio = totalDevices > 0 ? Math.round((trustedDevices / totalDevices) * 1000) / 10 : 0;
 
       // 4. Duplicate Identity Alerts (NIK, Device, Face)
       const allVerifs = await prisma.kYCVerification.findMany({ where: { isMock: false } });
@@ -404,7 +410,7 @@ export class SecurityController {
           verificationTimeSeconds: avgVerifTimeSeconds
         },
         duplicateNikAlerts,
-        trustedDeviceRatio: 94.5,
+        trustedDeviceRatio,
       });
     } catch (error: any) {
       next(error);
@@ -445,24 +451,38 @@ export class SecurityController {
     }
   }
 
-  // Block User
+  // Block / Unblock User (Toggle)
   async blockUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const officerId = req.user?.id || 'SYSTEM';
 
-      const user = await prisma.user.update({
-        where: { id: id as string },
-        data: { accountStatus: 'LOCKED' }
+      const existingUser = await prisma.user.findUnique({
+        where: { id: id as string }
       });
 
-      eventBus.publish('security.user_blocked', {
+      if (!existingUser) {
+        return sendError(res, 'User not found', 404);
+      }
+
+      const newStatus = existingUser.accountStatus === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
+
+      const user = await prisma.user.update({
+        where: { id: id as string },
+        data: { accountStatus: newStatus }
+      });
+
+      if (newStatus === 'ACTIVE') {
+        authService.resetFailedPins(id as string);
+      }
+
+      eventBus.publish(newStatus === 'LOCKED' ? 'security.user_blocked' : 'security.user_unblocked', {
         userId: id,
         officerId,
         officerName: 'CISO Officer'
       });
 
-      return sendSuccess(res, 'User locked successfully', user);
+      return sendSuccess(res, `User status updated to ${newStatus}`, user);
     } catch (error: any) {
       next(error);
     }
@@ -656,10 +676,11 @@ export class SecurityController {
       next(error);
     }
   }
-  // --- GOVERNANCE MASTER DATA ENDPOINT ---
   async getGovernanceData(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      // Governance data is MASTER data. It is always served, regardless of mock operational data settings.
+      // Always load governance seed data (roadmap, compliance, risks, etc.)
+
+
       const governance = await import('../seed/governance');
       
       return sendSuccess(res, 'Governance master data fetched successfully', {

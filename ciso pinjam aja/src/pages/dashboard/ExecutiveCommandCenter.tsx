@@ -163,9 +163,9 @@ export default function ExecutiveCommandCenter() {
     identityOverview: { verified: 0, pending: 0, rejected: 0, inProgress: 0, reuploadRequired: 0, suspended: 0 },
     approvedToday: 0,
     rejectedToday: 0,
-    averages: { ocrAccuracy: 95, faceMatchScore: 92, verificationTimeSeconds: 120 },
+    averages: { ocrAccuracy: 0, faceMatchScore: 0, verificationTimeSeconds: 0 },
     duplicateNikAlerts: [],
-    trustedDeviceRatio: 94.5
+    trustedDeviceRatio: 0
   });
 
   const [activeSessions, setActiveSessions] = useState<any[]>([]);
@@ -305,7 +305,10 @@ export default function ExecutiveCommandCenter() {
   const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
   const fetchIncidents = async () => {
     try {
-      const res = await fetch('/api/v1/security/incidents?limit=5');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+      const res = await fetch('/api/v1/security/incidents?limit=5', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (res.status === 429) {
         setHealthStatus(prev => ({ ...prev, overall: 'RATE_LIMITED' }));
         setRetryInterval(60000);
@@ -357,14 +360,14 @@ export default function ExecutiveCommandCenter() {
   const gaugeOption = useMemo(() => ({
     series: [{
       type: 'gauge',
-      startAngle: 220,
-      endAngle: -40,
+      startAngle: 210,
+      endAngle: -30,
       min: 0,
       max: 100,
-      pointer: { show: true, length: '55%', width: 4, itemStyle: { color: colors.blue } },
+      pointer: { show: true, length: '45%', width: 5, itemStyle: { color: colors.blue } },
       axisLine: {
         lineStyle: {
-          width: 18,
+          width: 20,
           color: [
             [0.4, colors.red], [0.6, colors.amber], [0.8, colors.blue], [1, colors.emerald]
           ],
@@ -376,12 +379,12 @@ export default function ExecutiveCommandCenter() {
       detail: {
         valueAnimation: true,
         formatter: '{value}',
-        fontSize: 36,
+        fontSize: 44,
         fontWeight: 'bold',
         color: textColor,
-        offsetCenter: [0, '30%'],
+        offsetCenter: [0, '40%'], // Push text down further
       },
-      title: { show: true, offsetCenter: [0, '55%'], fontSize: 12, color: mutedColor },
+      title: { show: true, offsetCenter: [0, '80%'], fontSize: 13, color: mutedColor },
       data: [{ value: overallSecurityScore, name: 'Security Score' }],
     }],
   }), [overallSecurityScore, textColor, mutedColor, colors]);
@@ -632,64 +635,76 @@ export default function ExecutiveCommandCenter() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Executive Decision Queue</h3>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">{pendingDecisions} Pending</span>
-          </div>
-          <div className="space-y-2">
-            {currentExecutiveDecisions.map(dec => {
-              const statusColor = dec.status === 'Approved' ? colors.emerald : dec.status === 'Rejected' ? colors.red : colors.amber;
-              const typeColor = dec.type === 'Approval' ? colors.blue : dec.type === 'Risk Acceptance' ? colors.amber : dec.type === 'Escalation' ? colors.red : colors.purple;
-              return (
-                <div key={dec.id} className="flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors"
-                  style={{ background: 'var(--color-bg-elevated)' }}
-                  onClick={() => openWorkflow('decision', dec.id)}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-elevated)'; }}>
-                  <div className="mt-0.5">
-                    {dec.type === 'Approval' ? <CheckCircle2 size={16} color={typeColor} /> :
-                     dec.type === 'Escalation' ? <AlertTriangle size={16} color={typeColor} /> :
-                     <Target size={16} color={typeColor} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${typeColor}20`, color: typeColor }}>{dec.type}</span>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${statusColor}20`, color: statusColor }}>{dec.status}</span>
+            <div className="space-y-2">
+            {currentExecutiveDecisions.length > 0 ? (
+              currentExecutiveDecisions.map(dec => {
+                const statusColor = dec.status === 'Approved' ? colors.emerald : dec.status === 'Rejected' ? colors.red : colors.amber;
+                const typeColor = dec.type === 'Approval' ? colors.blue : dec.type === 'Risk Acceptance' ? colors.amber : dec.type === 'Escalation' ? colors.red : colors.purple;
+                return (
+                  <div key={dec.id} className="flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors"
+                    style={{ background: 'var(--color-bg-elevated)' }}
+                    onClick={() => openWorkflow('decision', dec.id)}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-elevated)'; }}>
+                    <div className="mt-0.5">
+                      {dec.type === 'Approval' ? <CheckCircle2 size={16} color={typeColor} /> :
+                       dec.type === 'Escalation' ? <AlertTriangle size={16} color={typeColor} /> :
+                       <Target size={16} color={typeColor} />}
                     </div>
-                    <p className="text-xs font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{dec.title}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{dec.decidedBy} • {new Date(dec.date).toLocaleDateString('en-GB')}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${typeColor}20`, color: typeColor }}>{dec.type}</span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${statusColor}20`, color: statusColor }}>{dec.status}</span>
+                      </div>
+                      <p className="text-xs font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{dec.title}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{dec.decidedBy} • {new Date(dec.date).toLocaleDateString('en-GB')}</p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="p-4 text-center rounded-lg bg-white/5 border border-white/5 text-xs text-gray-400">
+                Tidak ada keputusan eksekutif yang tertunda saat ini.
+              </div>
+            )}
           </div>
         </div>
- 
+
         {/* Recent Incidents */}
         <div className="col-span-1 lg:col-span-5 rounded-xl p-5" style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Active Security Incidents</h3>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">{mockDataActive ? openIncidents : 0} Active</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">{openIncidents} Active</span>
           </div>
           <div className="space-y-2">
-            {incidents.map(inc => {
-              const sevColor = inc.severity === 'Critical' ? colors.red : inc.severity === 'High' ? colors.amber : inc.severity === 'Medium' ? colors.amber : colors.emerald;
-              return (
-                <div key={inc.id} className="p-3 rounded-lg cursor-pointer transition-colors"
-                  style={{ background: 'var(--color-bg-elevated)' }}
-                  onClick={() => openWorkflow('incident', inc.id)}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-elevated)'; }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--color-text-muted)' }}>{inc.id}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ background: sevColor }}>{inc.severity}</span>
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-surface)', color: 'var(--color-text-secondary)' }}>{inc.status}</span>
+            {incidents.length > 0 ? (
+              incidents.map(inc => {
+                const sevColor = inc.severity === 'Critical' ? colors.red : inc.severity === 'High' ? colors.amber : inc.severity === 'Medium' ? colors.amber : colors.emerald;
+                return (
+                  <div key={inc.id} className="p-3 rounded-lg cursor-pointer transition-colors"
+                    style={{ background: 'var(--color-bg-elevated)' }}
+                    onClick={() => openWorkflow('incident', inc.id)}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-elevated)'; }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--color-text-muted)' }}>{inc.id}</span>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ background: sevColor }}>{inc.severity}</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-surface)', color: 'var(--color-text-secondary)' }}>{inc.status}</span>
+                    </div>
+                    <p className="text-xs font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{inc.title}</p>
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                      Assigned: {inc.assignee} • {new Date(inc.createdAt).toLocaleDateString('en-GB')}
+                    </p>
                   </div>
-                  <p className="text-xs font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{inc.title}</p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                    Assigned: {inc.assignee} • {new Date(inc.createdAt).toLocaleDateString('en-GB')}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="p-4 text-center rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-xs text-emerald-400">
+                Tidak ada insiden keamanan aktif saat ini.
+              </div>
+            )}
           </div>
+        </div>
         </div>
       </div>
 
@@ -866,18 +881,24 @@ export default function ExecutiveCommandCenter() {
                           {session.user?.fullName ?? 'System User'}
                           <span className="text-[10px] block text-gray-500 font-mono">{session.userId}</span>
                         </td>
-                        <td className="py-2.5 text-gray-400 max-w-[200px] truncate">{session.userAgent}</td>
-                        <td className="py-2.5 font-mono text-gray-400">{session.ipAddress}</td>
+                        <td className="py-2.5 text-gray-400 max-w-[200px] truncate">
+                          {session.operatingSystem || session.browser ? `${session.operatingSystem || ''} ${session.browser ? `(${session.browser})` : ''}` : (session.userAgent || 'Web Browser')}
+                        </td>
+                        <td className="py-2.5 font-mono text-gray-400">{session.ipAddress || '::1'}</td>
                         <td className="py-2.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${session.isTrusted ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                            {session.isTrusted ? 'Trusted' : 'Untrusted'}
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${(session.isTrustedDevice ?? session.isTrusted) ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {(session.isTrustedDevice ?? session.isTrusted) ? 'Trusted' : 'Untrusted'}
                           </span>
                         </td>
                         <td className={`py-2.5 text-center font-bold ${isHighRisk ? 'text-red-500' : 'text-green-500'}`}>
                           {session.user?.riskScore ?? 15}%
                         </td>
-                        <td className="py-2.5 text-gray-400">{new Date(session.createdAt).toLocaleTimeString('en-GB')}</td>
-                        <td className="py-2.5 text-gray-400">{new Date(session.updatedAt).toLocaleTimeString('en-GB')}</td>
+                        <td className="py-2.5 text-gray-400">
+                          {session.lastLogin || session.createdAt ? new Date(session.lastLogin || session.createdAt).toLocaleTimeString('en-GB') : '-'}
+                        </td>
+                        <td className="py-2.5 text-gray-400">
+                          {session.lastActivity || session.updatedAt ? new Date(session.lastActivity || session.updatedAt).toLocaleTimeString('en-GB') : '-'}
+                        </td>
                       </tr>
                     );
                   })

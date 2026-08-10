@@ -431,6 +431,8 @@ export interface KYCVerification {
   submittedAt: string;
   matchScore?: number | null;
   ocrData: any;
+  ktpImageUrl?: string;
+  selfieImageUrl?: string;
   user?: {
     id: string;
     fullName: string;

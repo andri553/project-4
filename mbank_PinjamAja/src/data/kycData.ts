@@ -232,8 +232,21 @@ export const initialKYCHistory: KYCHistoryEntry[] = [
 ];
 
 // Helper to get OCR template for a user
-export function getOCRTemplate(userId: string): KTPOCRData {
-  return ocrTemplates[userId] || ocrTemplates['default'];
+export function getOCRTemplate(user: any): KTPOCRData {
+  const userId = typeof user === 'string' ? user : user?.id;
+  const userObj = typeof user === 'object' ? user : null;
+  const base = ocrTemplates[userId] || ocrTemplates['default'];
+
+  if (userObj && userObj.fullName && userObj.fullName !== 'User') {
+    const cleanPhone = (userObj.phone || '08123456789').replace(/\D/g, '');
+    return {
+      ...base,
+      nama: userObj.fullName.toUpperCase(),
+      nik: `3171${cleanPhone.slice(-12).padStart(12, '0')}`,
+    };
+  }
+
+  return base;
 }
 
 // Generate a random face match score

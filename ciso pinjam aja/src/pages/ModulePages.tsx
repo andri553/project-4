@@ -6,7 +6,7 @@ import {
   Server, Database, UserCog, GraduationCap, ClipboardCheck,
   BarChart3, Gauge, Code2, Settings, Layers,
   TrendingUp, TrendingDown, ExternalLink, FileText,
-  RefreshCw as RefreshCwIcon, Activity,
+  RefreshCw as RefreshCwIcon, Activity, CheckCircle
 } from 'lucide-react';
 import ModulePlaceholder from '@/components/common/ModulePlaceholder';
 
@@ -699,15 +699,272 @@ export function KPIEnginePage() {
 // ==========================================
 
 export function SecurityGovernancePage() {
-  return <ModulePlaceholder title="Security Governance" subtitle="Policy Lifecycle — Policies, Standards, Procedures & Guidelines"
-    icon={<FileCheck size={24} color="#8B5CF6" />}
-    features={['Policy Library', 'Document Lifecycle', 'Approval Workflow', 'Version History', 'Policy Coverage Matrix', 'RACI Matrix']} />;
+  const policies = [
+    {
+      id: 'POL-001',
+      title: 'Enterprise Information Security Policy (EISP)',
+      category: 'Governance & Leadership',
+      standard: 'ISO/IEC 27001 Cl. 5.1 & COBIT 2019',
+      owner: 'Budi Santoso, CISSP (CISO)',
+      version: 'v3.2',
+      reviewDate: '2026-01-15',
+      status: 'Approved & Published'
+    },
+    {
+      id: 'POL-002',
+      title: 'Identity & Access Control Policy (IAM)',
+      category: 'Access Management',
+      standard: 'NIST SP 800-63B & Zero Trust',
+      owner: 'Hendra Wijaya (Security Lead)',
+      version: 'v2.1',
+      reviewDate: '2026-03-01',
+      status: 'Approved & Published'
+    },
+    {
+      id: 'POL-003',
+      title: 'Data Classification & Encryption Standard',
+      category: 'Data Privacy & Protection',
+      standard: 'UU PDP No. 27/2022 & POJK 10/2022',
+      owner: 'Fajar Hidayat, CISA (DPO)',
+      version: 'v2.0',
+      reviewDate: '2026-02-10',
+      status: 'Approved & Published'
+    },
+    {
+      id: 'POL-004',
+      title: 'Secure SDLC & DevSecOps Framework',
+      category: 'Software Engineering',
+      standard: 'OWASP SAMM & DevSecOps Standards',
+      owner: 'Sari Maharani (Head of Dev)',
+      version: 'v1.4',
+      reviewDate: '2026-04-12',
+      status: 'Approved & Published'
+    },
+    {
+      id: 'POL-005',
+      title: 'Incident Response & Business Continuity Plan (BCP)',
+      category: 'Security Operations',
+      standard: 'ISO 22301 & NIST SP 800-61',
+      owner: 'Dewi Anggraeni (SOC Lead)',
+      version: 'v2.5',
+      reviewDate: '2026-05-20',
+      status: 'Approved & Published'
+    }
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Top Banner / Summary */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            <FileCheck style={{ color: '#8B5CF6' }} /> Security Governance & Policy Library
+          </h1>
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Policy Lifecycle — ISO 27001, NIST CSF 2.0, COBIT 2019 & UU PDP Standards
+          </p>
+        </div>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Total Active Policies</span>
+          <div className="text-2xl font-bold text-purple-400">18 Master Policies</div>
+          <span className="text-[10px] text-slate-500">100% Steering Approved</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Annual Review Rate</span>
+          <div className="text-2xl font-bold text-emerald-400">100% Up to Date</div>
+          <span className="text-[10px] text-slate-500">Audited Q2 2026</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Primary Framework</span>
+          <div className="text-2xl font-bold text-blue-400">ISO/IEC 27001</div>
+          <span className="text-[10px] text-slate-500">NIST CSF 2.0 & COBIT Aligned</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Governance Steering</span>
+          <div className="text-2xl font-bold text-emerald-400">ACTIVE</div>
+          <span className="text-[10px] text-slate-500">Monthly Board Review</span>
+        </div>
+      </div>
+
+      {/* Policy Library Table */}
+      <div className="rounded-xl border p-5 bg-slate-900/40 border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-200">Kebijakan & Standar Keamanan Informasi Terpublikasi</h2>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-semibold">
+            All 18 Policies Enforcement Active
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th className="p-3">Policy ID</th>
+                <th className="p-3">Nama Kebijakan & Dokumen</th>
+                <th className="p-3">Kategori</th>
+                <th className="p-3">Standar Regulasi Ref.</th>
+                <th className="p-3">Pemilik Kebijakan (Owner)</th>
+                <th className="p-3">Versi</th>
+                <th className="p-3">Status Approved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              {policies.map((pol) => (
+                <tr key={pol.id} className="hover:bg-slate-800/30 transition-colors">
+                  <td className="p-3 font-mono text-[11px] text-purple-400 font-bold">{pol.id}</td>
+                  <td className="p-3 font-semibold text-slate-100">{pol.title}</td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 text-[10px] font-semibold border border-blue-500/20">
+                      {pol.category}
+                    </span>
+                  </td>
+                  <td className="p-3 text-slate-400">{pol.standard}</td>
+                  <td className="p-3 text-slate-300">{pol.owner}</td>
+                  <td className="p-3 font-mono text-[11px] text-slate-400">{pol.version}</td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                      ✓ {pol.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* RACI Governance Structure */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-2">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">🏛️ Struktur Komite Tata Kelola (Security Steering Committee)</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Dipimpin oleh Chief Information Security Officer (CISO) bersama Direksi, Tim Hukum, Risk Manager, dan Engineering Lead untuk memastikan seluruh strategi keamanan siber 3-Tahun selaras dengan tujuan ekspansi bisnis SatuNusa.
+          </p>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-2">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">📋 RACI Matrix & Akuntabilitas Tata Kelola</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Menetapkan secara tegas siapa yang <strong>Responsible (R)</strong>, <strong>Accountable (A)</strong>, <strong>Consulted (C)</strong>, dan <strong>Informed (I)</strong> untuk setiap kebijakan keamanan. Menghilangkan keraguan tanggung jawab antar divisi.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function VulnerabilityManagementPage() {
-  return <ModulePlaceholder title="Vulnerability Management" subtitle="Scanner Results, CVSS Scoring, Remediation & SLA Tracking"
-    icon={<Bug size={24} color="#EA580C" />}
-    features={['Vulnerability Dashboard', 'Scanner Results', 'Asset-Vulnerability Matrix', 'Remediation Tracker', 'Patch Management', 'SLA Compliance']} />;
+  const { data: { vulnerabilities = [] } } = useGovernance();
+  const { openWorkflow } = useWorkflow();
+
+  const stats = useMemo(() => {
+    const total = vulnerabilities.length;
+    const critical = vulnerabilities.filter(v => v.severity === 'Critical' && v.status === 'Open').length;
+    const high = vulnerabilities.filter(v => v.severity === 'High' && v.status === 'Open').length;
+    const remediated = vulnerabilities.filter(v => v.status === 'Remediated').length;
+    return { total, critical, high, remediated };
+  }, [vulnerabilities]);
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            <Bug style={{ color: '#EA580C' }} /> Vulnerability Management
+          </h1>
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Scanner Results, CVSS Scoring, Remediation & SLA Tracking
+          </p>
+        </div>
+        <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
+          style={{ background: 'rgba(234, 88, 12, 0.1)', color: '#EA580C' }}>
+          <RefreshCwIcon size={12} /> Scan Now
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-xl border p-4 flex flex-col items-center justify-center" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}>
+          <ShieldAlert size={20} className="mb-2 text-red-500" />
+          <span className="text-2xl font-bold text-red-500">{stats.critical}</span>
+          <span className="text-[10px] text-slate-400 font-semibold mt-1">CRITICAL OPEN</span>
+        </div>
+        <div className="rounded-xl border p-4 flex flex-col items-center justify-center" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}>
+          <AlertTriangle size={20} className="mb-2 text-orange-500" />
+          <span className="text-2xl font-bold text-orange-500">{stats.high}</span>
+          <span className="text-[10px] text-slate-400 font-semibold mt-1">HIGH OPEN</span>
+        </div>
+        <div className="rounded-xl border p-4 flex flex-col items-center justify-center" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}>
+          <CheckCircle size={20} className="mb-2 text-emerald-500" />
+          <span className="text-2xl font-bold text-emerald-500">{stats.remediated}</span>
+          <span className="text-[10px] text-slate-400 font-semibold mt-1">REMEDIATED</span>
+        </div>
+        <div className="rounded-xl border p-4 flex flex-col items-center justify-center" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}>
+          <Activity size={20} className="mb-2 text-blue-500" />
+          <span className="text-2xl font-bold text-blue-500">{stats.total}</span>
+          <span className="text-[10px] text-slate-400 font-semibold mt-1">TOTAL SCANNED</span>
+        </div>
+      </div>
+
+      <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--color-bg-surface)', borderColor: 'var(--color-border)' }}>
+        <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+          <h3 className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Scanner Results</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b text-[10px] uppercase tracking-wider" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}>
+                <th className="p-3 font-semibold">ID</th>
+                <th className="p-3 font-semibold">Vulnerability</th>
+                <th className="p-3 font-semibold">Severity / CVSS</th>
+                <th className="p-3 font-semibold">Asset</th>
+                <th className="p-3 font-semibold">Status</th>
+                <th className="p-3 font-semibold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vulnerabilities.map((v) => (
+                <tr key={v.id} className="border-b last:border-0 hover:bg-slate-900/30 transition-colors" style={{ borderColor: 'var(--color-border)' }}>
+                  <td className="p-3 text-xs font-mono font-medium text-slate-400">{v.id}</td>
+                  <td className="p-3">
+                    <div className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{v.title}</div>
+                    <div className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{v.description.substring(0, 60)}...</div>
+                  </td>
+                  <td className="p-3 text-xs">
+                    <span className={`px-2 py-0.5 rounded font-semibold text-[10px] ${
+                      v.severity === 'Critical' ? 'bg-red-500/10 text-red-400' :
+                      v.severity === 'High' ? 'bg-orange-500/10 text-orange-400' :
+                      v.severity === 'Medium' ? 'bg-amber-500/10 text-amber-400' : 'bg-slate-500/10 text-slate-400'
+                    }`}>
+                      {v.severity} ({v.cvssScore})
+                    </span>
+                  </td>
+                  <td className="p-3 text-[10px] text-slate-300 font-mono">{v.affectedAssetId}</td>
+                  <td className="p-3 text-[10px] font-semibold">
+                    <span className={v.status === 'Remediated' ? 'text-emerald-400' : v.status === 'Open' ? 'text-red-400' : 'text-blue-400'}>
+                      {v.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <button onClick={() => openWorkflow('vulnerability', v.id)} className="text-xs font-medium text-blue-400 hover:underline">
+                      Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {vulnerabilities.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-xs text-slate-500 italic">No vulnerabilities found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function IncidentManagementPage() {
@@ -823,9 +1080,9 @@ export function IncidentManagementPage() {
                       <p className="text-slate-500 text-[10px] mt-0.5 font-mono">{inc.id}</p>
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${inc.severity === 'Critical' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
-                          inc.severity === 'High' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' :
-                            inc.severity === 'Medium' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${inc.severity?.toUpperCase() === 'CRITICAL' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                          inc.severity?.toUpperCase() === 'HIGH' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' :
+                            inc.severity?.toUpperCase() === 'MEDIUM' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
                               'bg-green-500/10 text-green-500 border border-green-500/20'
                         }`}>
                         {inc.severity}
@@ -906,9 +1163,348 @@ export function AssetManagementPage() {
 }
 
 export function DataProtectionPage() {
-  return <ModulePlaceholder title="Data Protection Center" subtitle="Privacy & Data Security — UU PDP Compliance Engine"
-    icon={<Database size={24} color="#8B5CF6" />}
-    features={['Data Inventory', 'Data Classification', 'Encryption Dashboard', 'Privacy Impact Assessment', 'Data Subject Rights', 'Consent Management']} />;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedAsset, setSelectedAsset] = useState<any | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRotating, setIsRotating] = useState(false);
+
+  const dataInventory = [
+    {
+      id: 'DP-001',
+      name: 'Foto KTP & Data NIK Nasabah',
+      category: 'Customer PII (Restricted)',
+      storage: 'Amazon S3 + Cloud Storage',
+      atRest: 'AES-256 (KMS Managed)',
+      inTransit: 'TLS 1.3 (HTTPS)',
+      status: 'Protected',
+      compliance: 'UU PDP Pasal 20-22',
+      kmsKeyId: 'arn:aws:kms:ap-southeast-3:1234567890:key/ktp-enc-v2',
+      lastRotation: '2026-06-15',
+      recordsCount: '5,240,118 records',
+      vaultRegion: 'ap-southeast-3 (Jakarta)'
+    },
+    {
+      id: 'DP-002',
+      name: 'Foto Selfie & Verifikasi Wajah',
+      category: 'Biometric PII (Restricted)',
+      storage: 'Encrypted S3 Bucket',
+      atRest: 'AES-256 (Encrypted)',
+      inTransit: 'TLS 1.3 (HTTPS)',
+      status: 'Protected',
+      compliance: 'UU PDP & OJK Reg',
+      kmsKeyId: 'arn:aws:kms:ap-southeast-3:1234567890:key/face-bio-v1',
+      lastRotation: '2026-07-01',
+      recordsCount: '5,180,940 records',
+      vaultRegion: 'ap-southeast-3 (Jakarta)'
+    },
+    {
+      id: 'DP-003',
+      name: 'Catatan Transaksi & Pinjaman',
+      category: 'Financial Data (Confidential)',
+      storage: 'PostgreSQL DB (Jakarta DC)',
+      atRest: 'AES-256 (Column Encryption)',
+      inTransit: 'mTLS 1.3',
+      status: 'Protected',
+      compliance: 'POJK 10/2022',
+      kmsKeyId: 'kms-pg-column-tx-secret',
+      lastRotation: '2026-05-20',
+      recordsCount: '18,920,400 rows',
+      vaultRegion: 'On-Premise + AWS RDS'
+    },
+    {
+      id: 'DP-004',
+      name: 'Database Nasabah BPR Akuisisi',
+      category: 'Legacy Banking Data',
+      storage: 'Migrated Cloud Vault',
+      atRest: 'AES-256 (Post-Migration)',
+      inTransit: 'TLS 1.3',
+      status: 'Protected',
+      compliance: 'BI & UU PDP',
+      kmsKeyId: 'kms-bpr-legacy-vault-key',
+      lastRotation: '2026-07-10',
+      recordsCount: '142,500 accounts',
+      vaultRegion: 'ap-southeast-3 (Jakarta)'
+    },
+    {
+      id: 'DP-005',
+      name: 'Kunci API & Secret Server',
+      category: 'Application Credentials',
+      storage: 'HashiCorp Vault / KMS',
+      atRest: 'AES-256 (Secret Store)',
+      inTransit: 'gRPC / TLS 1.3',
+      status: 'Protected',
+      compliance: 'ISO 27001',
+      kmsKeyId: 'vault-master-root-key-v4',
+      lastRotation: '2026-07-28',
+      recordsCount: '84 active secrets',
+      vaultRegion: 'Multi-Cloud Vault Cluster'
+    }
+  ];
+
+  const filteredInventory = useMemo(() => {
+    return dataInventory.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            item.compliance.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'ALL' || item.category.includes(selectedCategory);
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleRotateKey = async (asset: any) => {
+    setIsRotating(true);
+    await new Promise(r => setTimeout(r, 1200));
+    setIsRotating(false);
+    triggerToast(`Rotasi Kunci KMS Berhasil untuk ${asset.name}! Kunci baru telah di-generate & aktif.`);
+  };
+
+  const handleRunAudit = async (asset: any) => {
+    triggerToast(`Audit Enkripsi Berjalan: ${asset.name} terverifikasi 100% utuh & memenuhi ${asset.compliance}.`);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white border border-emerald-500/40 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up text-xs">
+          <CheckCircle size={18} className="text-emerald-400 shrink-0" />
+          <span className="font-medium">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Top Banner / Summary */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            <Database style={{ color: '#8B5CF6' }} /> Data Protection & Encryption Center
+          </h1>
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Privacy & Data Security — UU PDP Compliance Engine & Encryption Audit
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => triggerToast('Audit Enkripsi Global Selesai: 5 dari 5 Storage Vaults Terenkripsi Sempurna (AES-256).')}
+            className="px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs font-semibold hover:bg-purple-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Activity size={14} /> Run Global Encryption Audit
+          </button>
+        </div>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Encryption Coverage</span>
+          <div className="text-2xl font-bold text-emerald-400">99.7%</div>
+          <span className="text-[10px] text-slate-500">Data at Rest & Transit</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Storage Algorithm</span>
+          <div className="text-2xl font-bold text-blue-400">AES-256</div>
+          <span className="text-[10px] text-slate-500">Hardware Security Module (HSM)</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Transit Protocol</span>
+          <div className="text-2xl font-bold text-purple-400">TLS 1.3</div>
+          <span className="text-[10px] text-slate-500">Strict Transport Security (HSTS)</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">UU PDP Status</span>
+          <div className="text-2xl font-bold text-emerald-400">COMPLIANT</div>
+          <span className="text-[10px] text-slate-500">UU No. 27/2022 Aligned</span>
+        </div>
+      </div>
+
+      {/* Search & Filter Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border bg-slate-900/40 border-slate-800">
+        <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+          <input
+            type="text"
+            placeholder="Cari aset data, ID (e.g. DP-001), atau regulasi..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full text-xs px-3 py-2 rounded-lg border bg-slate-950/60 border-slate-800 text-slate-200 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 font-semibold">Klasifikasi:</span>
+          <select
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="text-xs px-3 py-2 rounded-lg border bg-slate-950/60 border-slate-800 text-slate-200 focus:outline-none focus:border-purple-500 cursor-pointer"
+          >
+            <option value="ALL">Semua Klasifikasi</option>
+            <option value="Customer PII">Customer PII</option>
+            <option value="Biometric PII">Biometric PII</option>
+            <option value="Financial Data">Financial Data</option>
+            <option value="Legacy Banking Data">Legacy Banking Data</option>
+            <option value="Application Credentials">Application Credentials</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Encryption Table */}
+      <div className="rounded-xl border p-5 bg-slate-900/40 border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-200">Data Asset Encryption Inventory</h2>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+            {filteredInventory.length}/5 Storage Vaults Filtered
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th className="p-3">Asset ID</th>
+                <th className="p-3">Nama Data / Aset</th>
+                <th className="p-3">Klasifikasi Data</th>
+                <th className="p-3">Enkripsi Penyimpanan (At Rest)</th>
+                <th className="p-3">Enkripsi Pengiriman (In Transit)</th>
+                <th className="p-3">Standar Regulasi</th>
+                <th className="p-3">Status</th>
+                <th className="p-3 text-right">Aksi Interaktif</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              {filteredInventory.map((item) => (
+                <tr
+                  key={item.id}
+                  onClick={() => setSelectedAsset(item)}
+                  className="hover:bg-purple-950/20 transition-colors cursor-pointer group"
+                >
+                  <td className="p-3 font-mono text-[11px] text-purple-400 font-bold group-hover:underline">{item.id}</td>
+                  <td className="p-3 font-semibold text-slate-100">{item.name}</td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 text-[10px] font-semibold border border-purple-500/20">
+                      {item.category}
+                    </span>
+                  </td>
+                  <td className="p-3 text-emerald-400 font-medium">🔒 {item.atRest}</td>
+                  <td className="p-3 text-blue-400 font-medium">🌐 {item.inTransit}</td>
+                  <td className="p-3 text-slate-400">{item.compliance}</td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                      ✓ {item.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => setSelectedAsset(item)}
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 text-[11px] font-semibold transition cursor-pointer"
+                    >
+                      Detail & Audit →
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredInventory.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-slate-500 italic">
+                    Tidak ada aset data yang sesuai dengan pencarian
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Technical Standards Box */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-2">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">🔒 Enkripsi Data Tersimpan (Data at Rest)</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Foto KTP dan selfie nasabah dienkripsi pada tingkat blok (Block-level AES-256) sebelum ditulis ke penyimpanan cloud. Kunci enkripsi dikelola secara terpusat via Key Management Service (KMS) dengan rotasi otomatis tiap 90 hari.
+          </p>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-2">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">🌐 Enkripsi Pengiriman (Data in Transit)</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Seluruh jalur komunikasi REST API antara aplikasi web nasabah dan server backend dilindungi oleh TLS 1.3 dengan cipher suite modern (ECDHE-RSA-AES128-GCM-SHA256). Mencegah serangan Eavesdropping & Man-in-the-Middle.
+          </p>
+        </div>
+      </div>
+
+      {/* Asset Detail Interactive Modal */}
+      {selectedAsset && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedAsset(null)}>
+          <div className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-xs font-mono font-bold text-purple-400 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+                  {selectedAsset.id}
+                </span>
+                <h3 className="text-base font-bold text-slate-100 mt-1">{selectedAsset.name}</h3>
+                <p className="text-xs text-slate-400">{selectedAsset.category}</p>
+              </div>
+              <button
+                onClick={() => setSelectedAsset(null)}
+                className="text-slate-400 hover:text-slate-100 p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase font-semibold">Storage Location</span>
+                <p className="font-semibold text-slate-200">{selectedAsset.storage}</p>
+                <span className="text-[10px] text-purple-400 block">{selectedAsset.vaultRegion}</span>
+              </div>
+
+              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase font-semibold">Regulasi</span>
+                <p className="font-semibold text-slate-200">{selectedAsset.compliance}</p>
+                <span className="text-[10px] text-emerald-400 block">✓ Status: {selectedAsset.status}</span>
+              </div>
+
+              <div className="col-span-2 p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase font-semibold">KMS Key Identifer (ARN)</span>
+                <p className="font-mono text-[11px] text-blue-300 break-all">{selectedAsset.kmsKeyId}</p>
+                <span className="text-[10px] text-slate-400 block">Rotasi Terakhir: {selectedAsset.lastRotation}</span>
+              </div>
+            </div>
+
+            {/* Action buttons inside modal */}
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-800">
+              <button
+                onClick={() => handleRunAudit(selectedAsset)}
+                className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
+              >
+                🔍 Audit Enkripsi Aset
+              </button>
+
+              <button
+                onClick={() => handleRotateKey(selectedAsset)}
+                disabled={isRotating}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer"
+              >
+                {isRotating ? (
+                  <>
+                    <Activity size={14} className="animate-spin" /> Meng-rotate Kunci...
+                  </>
+                ) : (
+                  <>
+                    🔄 Rotasi Kunci KMS Sekarang
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 import {
@@ -1250,7 +1846,7 @@ export function IAMPage() {
           </button>
 
           <h2 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-            <ActivityIcon size={20} className="text-blue-500" />
+            <Activity size={20} className="text-blue-500" />
             Security Investigation Profile: {selectedUserDetail.profile.fullName}
           </h2>
 
@@ -1378,9 +1974,344 @@ export function IAMPage() {
 }
 
 export function SecurityAwarenessPage() {
-  return <ModulePlaceholder title="Security Awareness Center" subtitle="Training Programs, Phishing Simulations & Security Culture"
-    icon={<GraduationCap size={24} color="#10B981" />}
-    features={['Training Programs', 'Completion Dashboard', 'Phishing Simulation', 'Quiz Management', 'Security Champions', 'Campaign Analytics']} />;
+  const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'programs' | 'phishing' | 'departments'>('programs');
+
+  const trainingModules = [
+    {
+      id: 'TR-01',
+      title: 'UU PDP & Perlindungan Data Pribadi Nasabah',
+      target: 'Wajib untuk 100% Karyawan Non-IT & CS',
+      completion: 94,
+      duration: '45 Menit',
+      status: 'Mandatory',
+      badge: 'UU PDP Rule',
+      icon: '🛡️'
+    },
+    {
+      id: 'TR-02',
+      title: 'Deteksi Phishing & Social Engineering',
+      target: '70% Karyawan Non-IT & Operations',
+      completion: 88,
+      duration: '30 Menit',
+      status: 'Active',
+      badge: 'Anti-Phishing',
+      icon: '🎣'
+    },
+    {
+      id: 'TR-03',
+      title: 'Kebijakan Kunci API & Sandi Rahasia',
+      target: 'DevOps, Engineering & Product Team',
+      completion: 91,
+      duration: '60 Menit',
+      status: 'Active',
+      badge: 'DevSecOps',
+      icon: '🔑'
+    },
+    {
+      id: 'TR-04',
+      title: 'Keamanan Transaksi QRIS Lintas Negara',
+      target: 'Tim Finance, Merchant & Customer Service',
+      completion: 84,
+      duration: '40 Menit',
+      status: 'Active',
+      badge: 'QRIS & BI',
+      icon: '🌐'
+    }
+  ];
+
+  const departmentData = [
+    { name: 'Customer Support & Operations', nonItPct: '85%', enrolled: 450, completion: '92%', clickRate: '4.2%', risk: 'LOW' },
+    { name: 'Marketing & User Acquisition', nonItPct: '90%', enrolled: 320, completion: '86%', clickRate: '5.1%', risk: 'MEDIUM' },
+    { name: 'Finance & BPR Operations', nonItPct: '75%', enrolled: 280, completion: '95%', clickRate: '2.8%', risk: 'LOW' },
+    { name: 'Software Engineering & IT', nonItPct: '5%', enrolled: 200, completion: '98%', clickRate: '1.0%', risk: 'SAFE' }
+  ];
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleQuizSubmit = (answerIndex: number) => {
+    setSelectedQuizAnswer(answerIndex);
+    setQuizSubmitted(true);
+    if (answerIndex === 1) {
+      triggerToast('Jawaban Benar! 🎉 Anda memahami prosedur pelaporan insiden phishing sesuai standar CISO.');
+    } else {
+      triggerToast('Jawaban Kurang Tepat. Email mencurigakan harus dilaporkan ke CISO, bukan diklik/dibalas.');
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white border border-emerald-500/40 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up text-xs">
+          <CheckCircle size={18} className="text-emerald-400 shrink-0" />
+          <span className="font-medium">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            <GraduationCap style={{ color: '#10B981' }} /> Security Awareness & Culture Center
+          </h1>
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Edukasi Keamanan & Simulasi Phishing — Membangun Budaya Siber untuk 70% Karyawan Non-IT PinjamAJA
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowQuizModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-2 shadow-lg cursor-pointer"
+          >
+            🧪 Jalankan Simulasi Quiz Karyawan
+          </button>
+        </div>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Audience Non-IT Enrolled</span>
+          <div className="text-2xl font-bold text-emerald-400">1,250 Staff</div>
+          <span className="text-[10px] text-slate-500">70% Total Tenaga Kerja PinjamAJA</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">UU PDP Training Completion</span>
+          <div className="text-2xl font-bold text-blue-400">89.4%</div>
+          <span className="text-[10px] text-slate-500">Mandatory Course Completed</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Phishing Simulation Click-Rate</span>
+          <div className="text-2xl font-bold text-amber-400">3.8%</div>
+          <span className="text-[10px] text-slate-500">Sangat Rendah (Target &lt; 5%)</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Security Culture Index</span>
+          <div className="text-2xl font-bold text-purple-400">82 / 100</div>
+          <span className="text-[10px] text-slate-500">Kategori: Mature & Resilient</span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+        <button
+          onClick={() => setActiveTab('programs')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'programs' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          📚 Modul Pelatihan Keamanan (4)
+        </button>
+        <button
+          onClick={() => setActiveTab('phishing')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'phishing' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          🎣 Kampanye Simulasi Phishing Real-Time
+        </button>
+        <button
+          onClick={() => setActiveTab('departments')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'departments' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          🏢 Statistik per Departemen (Non-IT)
+        </button>
+      </div>
+
+      {/* Tab Content 1: Training Programs */}
+      {activeTab === 'programs' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {trainingModules.map((mod) => (
+            <div key={mod.id} className="p-5 rounded-xl border bg-slate-900/40 border-slate-800 space-y-3 hover:border-emerald-500/40 transition">
+              <div className="flex items-center justify-between">
+                <span className="text-xl">{mod.icon}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {mod.badge}
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-slate-100">{mod.title}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{mod.target}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-slate-400">Tingkat Penyelesaian (Completion)</span>
+                  <span className="font-bold text-emerald-400">{mod.completion}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${mod.completion}%` }} />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-800/60">
+                <span className="text-slate-500">Durasi: {mod.duration}</span>
+                <button
+                  onClick={() => triggerToast(`Status Pelatihan ${mod.title}: Enrolled ${mod.completion}% completed.`)}
+                  className="text-emerald-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Lihat Kurikulum →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tab Content 2: Phishing Simulation */}
+      {activeTab === 'phishing' && (
+        <div className="p-5 rounded-xl border bg-slate-900/40 border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-200">Hasil Simulasi Phishing Kuartal Ini (Q3-2026)</h2>
+              <p className="text-xs text-slate-400">Uji Coba Email Phishing Palsu Mengatasnamakan OJK/BI Audit</p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-semibold">
+              Status: Active Simulation
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-500 block font-semibold">Email Dikirim</span>
+              <span className="text-lg font-bold text-slate-200 font-mono">1,250</span>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-500 block font-semibold">Dibuka (Opened)</span>
+              <span className="text-lg font-bold text-blue-400 font-mono">1,180 (94.4%)</span>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-500 block font-semibold">Klik Link (Vulnerable)</span>
+              <span className="text-lg font-bold text-amber-400 font-mono">48 (3.8%)</span>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+              <span className="text-[10px] text-slate-500 block font-semibold">Dilaporkan ke CISO</span>
+              <span className="text-lg font-bold text-emerald-400 font-mono">942 (75.3%)</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Content 3: Departments */}
+      {activeTab === 'departments' && (
+        <div className="rounded-xl border p-5 bg-slate-900/40 border-slate-800 space-y-4">
+          <h2 className="text-sm font-bold text-slate-200">Keterlibatan Karyawan Non-IT per Departemen</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Nama Departemen</th>
+                  <th className="p-3">Proporsi Non-IT</th>
+                  <th className="p-3">Jumlah Staf</th>
+                  <th className="p-3">Penyelesaian Edukasi</th>
+                  <th className="p-3">Phishing Click-Rate</th>
+                  <th className="p-3">Status Risiko</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {departmentData.map((dept, i) => (
+                  <tr key={i} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="p-3 font-semibold text-slate-100">{dept.name}</td>
+                    <td className="p-3 text-purple-400 font-mono">{dept.nonItPct}</td>
+                    <td className="p-3 text-slate-300">{dept.enrolled} staff</td>
+                    <td className="p-3 text-emerald-400 font-bold">{dept.completion}</td>
+                    <td className="p-3 text-amber-400 font-mono">{dept.clickRate}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        dept.risk === 'SAFE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                        dept.risk === 'LOW' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      }`}>
+                        {dept.risk}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Simulation Modal */}
+      {showQuizModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowQuizModal(false)}>
+          <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-xs font-mono font-bold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                  QUIZ EVALUASI KARYAWAN NON-IT
+                </span>
+                <h3 className="text-base font-bold text-slate-100 mt-1">Uji Pemahaman Keamanan Informasi</h3>
+              </div>
+              <button
+                onClick={() => { setShowQuizModal(false); setQuizSubmitted(false); setSelectedQuizAnswer(null); }}
+                className="text-slate-400 hover:text-slate-100 p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="font-semibold text-slate-200 leading-relaxed">
+                Pertanyaan: Jika Anda menerima email berisi lampiran berniat verifikasi KTP dari alamat <em>audit-ojk-support@gmail.com</em>, tindakan paling tepat sesuai prosedur PinjamAJA adalah?
+              </p>
+
+              <div className="space-y-2 pt-1">
+                {[
+                  'Membuka lampiran tersebut untuk memastikan kebenarannya.',
+                  'Melaporkan email mencurigakan tersebut ke Tim CISO / CS melalui tombol Report Phishing.',
+                  'Membalas email tersebut dengan mengirimkan foto KTP nasabah.',
+                  'Mengabaikan email dan menghapusnya tanpa melapor ke siapapun.'
+                ].map((option, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleQuizSubmit(idx)}
+                    className={`w-full text-left p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
+                      selectedQuizAnswer === idx
+                        ? idx === 1 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-red-500/20 border-red-500 text-red-300'
+                        : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <span>{option}</span>
+                    {selectedQuizAnswer === idx && (
+                      <span className="text-sm font-bold">{idx === 1 ? '✓' : '✕'}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {quizSubmitted && (
+                <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                  selectedQuizAnswer === 1 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                }`}>
+                  <p className="font-bold mb-0.5">
+                    {selectedQuizAnswer === 1 ? '🎉 Jawaban Sempurna!' : '⚠️ Perhatian:'}
+                  </p>
+                  <p>
+                    {selectedQuizAnswer === 1
+                      ? 'Langkah ini tepat sesuai kebijakan UU PDP & CISO PinjamAJA. Email resmi pemerintah tidak menggunakan domain gratisan seperti @gmail.com.'
+                      : 'Jangan pernah membocorkan data KTP atau membalas email mencurigakan. Selalu laporkan email phishing ke tim CISO.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function AuditManagementPage() {
@@ -1618,9 +2549,312 @@ export function ReportsPage() {
 }
 
 export function SecureSDLCPage() {
-  return <ModulePlaceholder title="Secure SDLC" subtitle="DevSecOps — Pipeline Security, SAST/DAST, Secret Management"
-    icon={<Code2 size={24} color="#EC4899" />}
-    features={['Pipeline Dashboard', 'Security Testing', 'Secret Management', 'Code Review Checklist', 'Dependency Audit', 'Security Gates']} />;
+  const [activeTab, setActiveTab] = useState<'pipelines' | 'secrets' | 'vulnerabilities'>('pipelines');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [secretGateEnforced, setSecretGateEnforced] = useState(true);
+
+  const microservices = [
+    {
+      id: 'MS-01',
+      name: 'mbank-core-api',
+      cloud: 'AWS (ap-southeast-3)',
+      sast: 'PASSED (0 High)',
+      dast: 'PASSED',
+      secretScan: 'CLEAN (0 Keys)',
+      depCheck: 'CLEAN',
+      status: 'APPROVED',
+      lastDeploy: '2026-07-29 16:40'
+    },
+    {
+      id: 'MS-02',
+      name: 'mbank-kyc-service',
+      cloud: 'AWS S3 + Cloud Storage',
+      sast: 'PASSED (0 High)',
+      dast: 'PASSED',
+      secretScan: 'CLEAN (0 Keys)',
+      depCheck: 'CLEAN',
+      status: 'APPROVED',
+      lastDeploy: '2026-07-30 09:15'
+    },
+    {
+      id: 'MS-03',
+      name: 'qris-crossborder-service',
+      cloud: 'GCP (asia-southeast2)',
+      sast: 'PASSED (0 High)',
+      dast: 'PASSED',
+      secretScan: 'CLEAN (0 Keys)',
+      depCheck: 'CLEAN',
+      status: 'APPROVED',
+      lastDeploy: '2026-07-30 11:30'
+    },
+    {
+      id: 'MS-04',
+      name: 'bpr-migration-worker',
+      cloud: 'Hybrid (On-Prem + Cloud)',
+      sast: 'PASSED (0 High)',
+      dast: 'PASSED',
+      secretScan: 'CLEAN (0 Keys)',
+      depCheck: 'CLEAN',
+      status: 'APPROVED',
+      lastDeploy: '2026-07-28 14:00'
+    },
+    {
+      id: 'MS-05',
+      name: 'micro-insurance-service',
+      cloud: 'GCP App Engine',
+      sast: 'PASSED (0 High)',
+      dast: 'PASSED',
+      secretScan: 'CLEAN (0 Keys)',
+      depCheck: 'CLEAN',
+      status: 'APPROVED',
+      lastDeploy: '2026-07-30 08:20'
+    }
+  ];
+
+  const secretScanAuditLogs = [
+    {
+      id: 'SEC-LOG-901',
+      repo: 'pinjamaja-backend-core',
+      developer: 'dev-team@pinjamaja.co.id',
+      event: 'Git Pre-Commit Hook Triggered',
+      finding: 'Attempted hardcoded AWS Secret Key commit blocked automatically',
+      action: 'BLOCKED BY SECURITY GATE',
+      timestamp: '2026-07-29 18:22'
+    },
+    {
+      id: 'SEC-LOG-902',
+      repo: 'qris-payment-microservice',
+      developer: 'infra@pinjamaja.co.id',
+      event: 'Vault Secret Injection Verification',
+      finding: 'API keys securely injected via HashiCorp Vault environment variables',
+      action: 'PASSED',
+      timestamp: '2026-07-30 10:14'
+    },
+    {
+      id: 'SEC-LOG-903',
+      repo: 'bpr-savings-migrator',
+      developer: 'dev-team@pinjamaja.co.id',
+      event: 'Automated TruffleHog Repo Scan',
+      finding: '0 plain-text credentials found across 412 commits',
+      action: 'PASSED',
+      timestamp: '2026-07-30 12:05'
+    }
+  ];
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleRunDevSecOpsPipeline = async () => {
+    setIsScanning(true);
+    await new Promise(r => setTimeout(r, 1500));
+    setIsScanning(false);
+    triggerToast('DevSecOps Pipeline Scan Completed: 14/14 Microservices Approved. 0 Hardcoded Keys Found!');
+  };
+
+  const handleToggleGate = () => {
+    const nextVal = !secretGateEnforced;
+    setSecretGateEnforced(nextVal);
+    triggerToast(nextVal ? 'Security Gate DIAKTIFKAN: Git commit dengan hardcoded API key akan diblokir otomatis!' : 'Security Gate Dinonaktifkan.');
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white border border-pink-500/40 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up text-xs">
+          <CheckCircle size={18} className="text-pink-400 shrink-0" />
+          <span className="font-medium">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+            <Code2 style={{ color: '#EC4899' }} /> Secure SDLC & DevSecOps Control Center
+          </h1>
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Pipeline Security, Secret Scanning (Pencegahan Hardcoded API Keys), SAST/DAST & Automated Security Gates
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleToggleGate}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              secretGateEnforced ? 'bg-pink-500/20 text-pink-300 border-pink-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            🔒 Secret Gate: {secretGateEnforced ? 'ENFORCED (Active)' : 'DISABLED'}
+          </button>
+
+          <button
+            onClick={handleRunDevSecOpsPipeline}
+            disabled={isScanning}
+            className="px-3.5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition flex items-center gap-2 shadow-lg cursor-pointer"
+          >
+            {isScanning ? (
+              <>
+                <Activity size={14} className="animate-spin" /> Running SAST/DAST Scan...
+              </>
+            ) : (
+              <>
+                🚀 Trigger CI/CD Security Scan
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Active Microservices</span>
+          <div className="text-2xl font-bold text-pink-400">14 Services</div>
+          <span className="text-[10px] text-slate-500">AWS & GCP Cloud Native</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Secret Scanner Status</span>
+          <div className="text-2xl font-bold text-emerald-400">0 Hardcoded Keys</div>
+          <span className="text-[10px] text-slate-500">100% Repos Clean (HashiCorp Vault)</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Automated SAST/DAST Coverage</span>
+          <div className="text-2xl font-bold text-blue-400">98.2%</div>
+          <span className="text-[10px] text-slate-500">Pre-Deployment Automated Testing</span>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400">Security Gate Approval Rate</span>
+          <div className="text-2xl font-bold text-purple-400">96.5%</div>
+          <span className="text-[10px] text-slate-500">Build Non-Compliant Diblokir Otomatis</span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+        <button
+          onClick={() => setActiveTab('pipelines')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'pipelines' ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          🚀 CI/CD Security Gates (Microservices)
+        </button>
+        <button
+          onClick={() => setActiveTab('secrets')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+            activeTab === 'secrets' ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          🔒 Secret Management & Anti-Hardcode Audit
+        </button>
+      </div>
+
+      {/* Tab Content 1: Microservices CI/CD Pipelines */}
+      {activeTab === 'pipelines' && (
+        <div className="rounded-xl border p-5 bg-slate-900/40 border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-200">Microservices CI/CD Security Gate Status</h2>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+              5/5 Core Microservices Verified Safe
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-950/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Service ID</th>
+                  <th className="p-3">Nama Microservice</th>
+                  <th className="p-3">Cloud Platform</th>
+                  <th className="p-3">SAST Code Scan</th>
+                  <th className="p-3">DAST API Scan</th>
+                  <th className="p-3">Secret Scan</th>
+                  <th className="p-3">Status Pipeline</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {microservices.map((ms) => (
+                  <tr key={ms.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="p-3 font-mono text-[11px] text-pink-400 font-bold">{ms.id}</td>
+                    <td className="p-3 font-semibold text-slate-100">{ms.name}</td>
+                    <td className="p-3 text-slate-400">{ms.cloud}</td>
+                    <td className="p-3 text-emerald-400 font-medium">✓ {ms.sast}</td>
+                    <td className="p-3 text-blue-400 font-medium">✓ {ms.dast}</td>
+                    <td className="p-3 text-purple-400 font-medium">🔒 {ms.secretScan}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                        ✓ {ms.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Content 2: Secret Scanning Audit Logs */}
+      {activeTab === 'secrets' && (
+        <div className="rounded-xl border p-5 bg-slate-900/40 border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-200">Anti-Hardcode Secret Scanning Audit Logs</h2>
+              <p className="text-xs text-slate-400">Deteksi Otomatis & Pemblokiran API Keys/Kunci Rahasia di Git Repositori</p>
+            </div>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-pink-500/10 text-pink-300 border border-pink-500/20 font-semibold">
+              TruffleHog & GitGuardian Active
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {secretScanAuditLogs.map((log) => (
+              <div key={log.id} className="p-4 rounded-xl border bg-slate-950/60 border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-pink-400">{log.id}</span>
+                    <span className="text-slate-300 font-bold">{log.repo}</span>
+                    <span className="text-[10px] text-slate-500">by {log.developer}</span>
+                  </div>
+                  <p className="text-slate-300 font-medium">{log.event}</p>
+                  <p className="text-slate-400 text-[11px]">{log.finding}</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className={`px-2.5 py-1 rounded text-[10px] font-bold border ${
+                    log.action.includes('BLOCKED') ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {log.action}
+                  </span>
+                  <span className="text-[10px] text-slate-500">{log.timestamp}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* DevSecOps Policy Standards Box */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-2">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">🔒 Kebijakan Anti-Hardcode API Key (Solusi Gap #2)</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Seluruh kunci API dan password dilarang keras ditulis di kode program. Git Pre-Commit Hook (TruffleHog) secara otomatis memblokir git push jika ditemukan API key polos. Kunci diinjeksi saat runtime via HashiCorp Vault.
+          </p>
+        </div>
+        <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 space-y-2">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">🚀 Otomasi Security Gates di CI/CD Pipeline</h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Setiap fitur baru harus lulus pengujian keamanan otomatis (SAST/DAST & Dependency Audit) sebelum di-deploy ke AWS atau Google Cloud. Build yang gagal pengujian keamanan akan diblokir otomatis dari rilis produksi.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function SettingsPage() {
